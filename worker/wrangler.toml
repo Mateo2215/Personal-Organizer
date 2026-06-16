@@ -1,0 +1,17 @@
+# Cloudflare Worker config — Personal Organizer API + cron (push scheduler).
+# database_id jest placeholderem do czasu założenia konta Cloudflare (Faza 4).
+# Do Fazy 4 pracujemy lokalnie: `npm run migrate:local` + `npm run dev`.
+
+name = "personal-organizer-api"
+main = "src/index.ts"
+compatibility_date = "2026-06-01"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "personal-organizer"
+database_id = "00000000-0000-0000-0000-000000000000" # placeholder — uzupełnić po `wrangler d1 create`
+
+# Budzik: Cron co minutę sprawdza zadania do przypomnienia i wysyła push.
+[triggers]
+crons = ["* * * * *"]

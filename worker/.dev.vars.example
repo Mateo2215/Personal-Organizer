@@ -1,0 +1,9 @@
+# Wzór zmiennych lokalnych dla `wrangler dev`. Skopiuj do `.dev.vars` i ustaw własne wartości.
+# .dev.vars jest w .gitignore — NIE commituj prawdziwych wartości.
+
+# Token dostępu do API (front wysyła go w nagłówku Authorization).
+APP_TOKEN="zmien-mnie-na-dlugi-losowy-ciag"
+
+# Klucze VAPID (Web Push) — generowane w Fazie 1. Publiczny jawny, prywatny sekretny.
+VAPID_PUBLIC_KEY=""
+VAPID_PRIVATE_KEY=""
