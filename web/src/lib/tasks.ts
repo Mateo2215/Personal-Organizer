@@ -47,3 +47,19 @@ export function formatLocal(iso: string | null): string {
     minute: "2-digit",
   });
 }
+
+// Zaległe: otwarte zadanie z terminem, którego czas już minął.
+export function isOverdue(t: Task): boolean {
+  return t.status === "open" && !!t.due_at && new Date(t.due_at).getTime() < Date.now();
+}
+
+// Dzisiejsze: termin wypada w dzisiejszym dniu (czas lokalny urządzenia).
+export function isToday(t: Task): boolean {
+  if (!t.due_at) return false;
+  const due = new Date(t.due_at);
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 1);
+  return due >= start && due < end;
+}

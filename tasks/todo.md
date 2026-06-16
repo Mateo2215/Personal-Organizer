@@ -37,10 +37,13 @@ Pełne decyzje: `../../ai-os/projects/personal-organizer/decisions.md`. Plan: `~
 - [ ] P1: Test cronu (lokalnie: `curl .../cdn-cgi/handler/scheduled`; punktualność dopiero po deployu)
 - [ ] P1: Obejście optymalizacji baterii (instrukcja + weryfikacja) — po deployu
 
-### Faza 2 — Zadania w pełni
-- [ ] P2: Zakładka „Zadania" (nadchodzące) + edycja/usuwanie + toggle „zrobione"
-- [ ] P2: Wyróżnienie zaległych
-- [ ] P2: Widok „Dziś" (dzisiejsze + zaległe + szybki guzik pomysłu)
+### Faza 2 — Zadania w pełni (głównie zrobione)
+- [x] Dolna nawigacja (Dziś / Zadania / Pomysły) + Layout + react-router
+- [x] Zakładka „Zadania" (lista + formularz) + usuwanie + toggle „zrobione"
+- [x] Wyróżnienie zaległych (czerwone)
+- [x] Widok „Dziś" (dzisiejsze + zaległe + szybki guzik pomysłu) + włączanie powiadomień
+- [ ] P2: Edycja treści/terminu zadania w UI (endpoint PATCH gotowy, brakuje afordancji edycji)
+- [ ] P3: Zadania bez godziny (due_at null) nie pojawiają się w „Dziś" — do rozważenia obsługa
 
 ### Faza 3 — Pomysły + projekty
 - [ ] P2: Projekty CRUD (dodaj/zmień nazwę/usuń → pomysły do Skrzynki)
