@@ -193,6 +193,20 @@ app.delete("/api/ideas/:id", async (c) => {
   return c.body(null, 204);
 });
 
+// --- Eksport danych: wszystkie zadania, pomysły i projekty jako JSON do pobrania. ---
+app.get("/api/export", async (c) => {
+  const [tasksRes, ideasRes, projectsRes] = await Promise.all([
+    c.env.DB.prepare("SELECT * FROM tasks ORDER BY created_at ASC, id ASC").all(),
+    c.env.DB.prepare("SELECT * FROM ideas ORDER BY created_at ASC, id ASC").all(),
+    c.env.DB.prepare("SELECT * FROM projects ORDER BY name COLLATE NOCASE ASC").all(),
+  ]);
+  return c.json({
+    tasks: tasksRes.results ?? [],
+    ideas: ideasRes.results ?? [],
+    projects: projectsRes.results ?? [],
+  });
+});
+
 // --- Dev: ręczny test wysyłki push do wszystkich subskrypcji (do spike'u). ---
 app.post("/api/_dev/test-push", async (c) => {
   const result = await sendToAll(c.env, { title: "Test push", body: "Działa 🎉", tag: "test" });

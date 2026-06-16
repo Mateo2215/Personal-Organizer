@@ -19,11 +19,19 @@ export default defineConfig({
         name: 'Personal Organizer',
         short_name: 'Organizer',
         description: 'Zadania z przypomnieniami, pomysły i widok Dziś.',
+        lang: 'pl',
         theme_color: '#0a0a0a',
         background_color: '#0a0a0a',
         display: 'standalone',
+        orientation: 'portrait',
         start_url: '/',
-        // Ikony dochodzą w Fazie 4 (manifest PWA + instalacja na ekran główny).
+        // Pliki ikon powstają w Claude Design (osobny program) i trafiają do web/public/.
+        // Dwa rozmiary PNG to minimum instalowalności; maskable daje ładną ikonę na ekranie głównym Androida.
+        icons: [
+          { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: '/icon-512-maskable.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+        ],
       },
       devOptions: {
         enabled: true, // SW aktywny też w `vite dev` — pozwala testować push lokalnie

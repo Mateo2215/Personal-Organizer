@@ -52,11 +52,36 @@ Pełne decyzje: `../../ai-os/projects/personal-organizer/decisions.md`. Plan: `~
 - [x] P2: Lista pomysłów pogrupowana po projektach + Skrzynka. Ideas.tsx (grupowanie) + ProjectGroup.tsx (nagłówek z rename/delete + wiersze). useIdeasData.ts (queries+mutacje).
 
 ### Faza 4 — Wykończenie + dowóz
-- [ ] P1: Manifest PWA + ikony (instalacja na ekran główny)
-- [ ] P2: Przejście designem (ciemny/minimal, wytyczne `pretty`)
-- [ ] P2: Guzik eksportu danych (`GET /api/export` → JSON)
-- [ ] P1: Konto Cloudflare + produkcyjny deploy (Pages + Worker + D1 + Cron)
-- [ ] P1: Kontrola limitów $0 po wdrożeniu
+Architektura deployu: **jeden Worker serwuje front + API** (Workers Static Assets) — ten sam origin, zero CORS,
+względne `/api/*` działają bez zmian, jeden deploy. (decyzja 2026-06-16, patrz decisions.md.)
+
+**Blok A — lokalnie (bez konta CF):**
+- [x] A1 P1: Manifest PWA + podpięcie ikon. `manifest.icons` w `vite.config.ts` (192/512/512-maskable),
+      `index.html` (`lang="pl"`, tytuł, `theme-color`, apple-touch-icon). **Ikony powstają w Claude Design** —
+      kod referuje ścieżki w `web/public/`, spec w `web/public/ICONS.md`; pliki PNG wrzucimy gdy gotowe. Build OK.
+- [x] A2 P1: Single-Worker static assets. `[assets]` w `wrangler.toml` (`directory="../web/dist"`,
+      `not_found_handling="single-page-application"`, `run_worker_first=["/api/*"]`). `predeploy` buduje front.
+      Zweryfikowane `wrangler deploy --dry-run`: 10 plików z dist, binding D1 OK, config waliduje się.
+- [x] A3 P2: Eksport danych. Worker `GET /api/export` → JSON `{tasks, ideas, projects}` (bez subskrypcji).
+      Front: `lib/export.ts` + guzik „Eksportuj" w `Layout.tsx` (header). Build tsc+vite OK.
+- [ ] A4 P2: Przejście designem (ciemny/minimal, wytyczne `pretty`) — ODŁOŻONE NA PO DEPLOYU (decyzja 2026-06-16):
+      deploy najpierw na obecnym UI, design pass po kilku dniach realnego użycia (zobaczyć co uwiera). Ikony z Claude Design wgrać przy okazji.
+- [x] A5 P1: Checklista komend Bloku B — `personal-organizer/DEPLOY.md`.
+
+**Blok B — AKCJA USERA (konto Cloudflare, bez karty):**
+- [ ] B1: `wrangler login` (założyć/zalogować konto bez karty).
+- [ ] B2: `wrangler d1 create personal-organizer` → wkleić `database_id` do `wrangler.toml`.
+- [ ] B3: Sekrety `wrangler secret put`: **`APP_TOKEN`** (długi losowy, NIE placeholder) + `VAPID_PUBLIC_KEY`,
+      `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (wartości z `worker/.dev.vars`).
+- [ ] B4: `npm run migrate:remote`.
+- [ ] B5: `npm run deploy` (build front + deploy Worker z assetami).
+
+**Blok C — weryfikacja na Androidzie (wspólnie):**
+- [ ] C1 P1: Otworzyć adres na telefonie → wpisać APP_TOKEN → zainstalować PWA na ekran główny.
+- [ ] C2 P1: Włączyć powiadomienia (subskrypcja push).
+- [ ] C3 P1: Zadanie na ~2 min → zamknąć apkę → push przychodzi? Punktualność cronu.
+- [ ] C4 P1: Obejście optymalizacji baterii (instrukcja + weryfikacja przy zamkniętej apce).
+- [ ] C5 P1: Kontrola limitów $0 w dashboardzie (Workers requests, D1, cron 1440/dobę).
 
 ## Świadomie później (v2+)
 - [ ] P3: „Przypomnij X minut wcześniej"

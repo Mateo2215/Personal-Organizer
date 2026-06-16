@@ -1,11 +1,18 @@
-# Cloudflare Worker config — Personal Organizer API + cron (push scheduler).
-# database_id jest placeholderem do czasu założenia konta Cloudflare (Faza 4).
-# Do Fazy 4 pracujemy lokalnie: `npm run migrate:local` + `npm run dev`.
+# Cloudflare Worker config — Personal Organizer: serwuje front (Static Assets) + API + cron (push scheduler).
+# database_id jest placeholderem do czasu założenia konta Cloudflare (Faza 4, Blok B).
 
 name = "personal-organizer-api"
 main = "src/index.ts"
 compatibility_date = "2026-06-01"
 compatibility_flags = ["nodejs_compat"]
+
+# Jeden Worker serwuje zbudowany front (web/dist) ORAZ API — ten sam origin, zero CORS.
+# run_worker_first kieruje TYLKO /api/* do Workera; reszta to statyczny front.
+# not_found_handling = SPA → react-router dostaje index.html dla nieznanych ścieżek nawigacji.
+[assets]
+directory = "../web/dist"
+not_found_handling = "single-page-application"
+run_worker_first = ["/api/*"]
 
 [[d1_databases]]
 binding = "DB"
