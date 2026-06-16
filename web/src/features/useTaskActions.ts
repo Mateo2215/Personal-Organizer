@@ -1,7 +1,7 @@
 // Wspólne zapytanie i mutacje zadań (współdzielone przez widoki Dziś i Zadania).
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { listTasks, patchTask, deleteTask } from "../lib/tasks";
+import { listTasks, patchTask, deleteTask, type TaskPatch } from "../lib/tasks";
 
 export function useTasks() {
   return useQuery({ queryKey: ["tasks"], queryFn: listTasks });
@@ -19,6 +19,10 @@ export function useTaskActions() {
     mutationFn: (id: number) => deleteTask(id),
     onSuccess: invalidate,
   });
+  const update = useMutation({
+    mutationFn: (v: { id: number; patch: TaskPatch }) => patchTask(v.id, v.patch),
+    onSuccess: invalidate,
+  });
 
-  return { toggle, remove };
+  return { toggle, remove, update };
 }

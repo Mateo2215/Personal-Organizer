@@ -10,7 +10,7 @@ import { isOverdue } from "../lib/tasks";
 export function TasksPage() {
   const qc = useQueryClient();
   const { data: tasks, isLoading, isError } = useTasks();
-  const { toggle, remove } = useTaskActions();
+  const { toggle, remove, update } = useTaskActions();
 
   const add = useMutation({
     mutationFn: addTask,
@@ -71,6 +71,7 @@ export function TasksPage() {
             overdue={isOverdue(t)}
             onToggle={() => toggle.mutate({ id: t.id, status: t.status === "done" ? "open" : "done" })}
             onDelete={() => remove.mutate(t.id)}
+            onSave={(patch) => update.mutateAsync({ id: t.id, patch })}
           />
         ))}
         {tasks?.length === 0 && <p className="text-sm text-neutral-500">Brak zadań.</p>}

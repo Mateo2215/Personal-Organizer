@@ -19,6 +19,14 @@ export interface NewTask {
   has_time: boolean;
 }
 
+// Pola edytowalne zadania (edycja treści/terminu z UI).
+export type TaskPatch = Partial<{
+  content: string;
+  due_at: string | null;
+  has_time: boolean;
+  status: "open" | "done";
+}>;
+
 export const listTasks = () => api<Task[]>("/api/tasks");
 
 export const addTask = (input: NewTask) =>
@@ -35,6 +43,14 @@ export const deleteTask = (id: number) =>
 // Wartość z <input type="datetime-local"> (lokalna, bez strefy) → ISO UTC.
 export function localInputToUtcIso(value: string): string {
   return new Date(value).toISOString();
+}
+
+// ISO UTC → wartość dla <input type="datetime-local"> (lokalny czas, format "YYYY-MM-DDTHH:mm").
+export function utcIsoToLocalInput(iso: string | null): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
 // ISO UTC → czytelny czas lokalny (Europe/Warsaw na urządzeniu użytkownika).

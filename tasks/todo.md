@@ -42,8 +42,8 @@ Pełne decyzje: `../../ai-os/projects/personal-organizer/decisions.md`. Plan: `~
 - [x] Zakładka „Zadania" (lista + formularz) + usuwanie + toggle „zrobione"
 - [x] Wyróżnienie zaległych (czerwone)
 - [x] Widok „Dziś" (dzisiejsze + zaległe + szybki guzik pomysłu) + włączanie powiadomień
-- [ ] P2: Edycja treści/terminu zadania w UI (endpoint PATCH gotowy, brakuje afordancji edycji)
-- [ ] P3: Zadania bez godziny (due_at null) nie pojawiają się w „Dziś" — do rozważenia obsługa
+- [x] P2: Edycja treści/terminu zadania w UI (ołówek → inline form w TaskRow; mutacja `update` w useTaskActions; build OK)
+- [x] P3: Zadania bez terminu (due_at null) — DECYZJA: zostają tylko w „Zadania", „Dziś" pozostaje skupione (dziś+zaległe). Drzwi otwarte na sekcję „Bez terminu", jeśli w użyciu coś będzie umykać.
 
 ### Faza 3 — Pomysły + projekty
 - [ ] P2: Projekty CRUD (dodaj/zmień nazwę/usuń → pomysły do Skrzynki)

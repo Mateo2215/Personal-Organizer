@@ -9,7 +9,7 @@ import { enablePush, notificationsGranted } from "../lib/push";
 
 export function Today() {
   const { data: tasks, isLoading } = useTasks();
-  const { toggle, remove } = useTaskActions();
+  const { toggle, remove, update } = useTaskActions();
   const navigate = useNavigate();
 
   const [granted, setGranted] = useState(notificationsGranted());
@@ -55,6 +55,7 @@ export function Today() {
                 overdue
                 onToggle={() => toggle.mutate(toggleArgs(t.id, t.status))}
                 onDelete={() => remove.mutate(t.id)}
+                onSave={(patch) => update.mutateAsync({ id: t.id, patch })}
               />
             ))}
           </ul>
@@ -70,6 +71,7 @@ export function Today() {
               task={t}
               onToggle={() => toggle.mutate(toggleArgs(t.id, t.status))}
               onDelete={() => remove.mutate(t.id)}
+              onSave={(patch) => update.mutateAsync({ id: t.id, patch })}
             />
           ))}
         </ul>
