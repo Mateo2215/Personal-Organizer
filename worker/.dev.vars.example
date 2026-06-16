@@ -4,6 +4,7 @@
 # Token dostępu do API (front wysyła go w nagłówku Authorization).
 APP_TOKEN="zmien-mnie-na-dlugi-losowy-ciag"
 
-# Klucze VAPID (Web Push) — generowane w Fazie 1. Publiczny jawny, prywatny sekretny.
+# Web Push (VAPID). Wygeneruj: `npx web-push generate-vapid-keys --json`.
+VAPID_SUBJECT="mailto:twoj@email.example"
 VAPID_PUBLIC_KEY=""
 VAPID_PRIVATE_KEY=""

@@ -1,10 +1,14 @@
 # Personal Organizer — Todo
 
 ## Current State
-Faza 0 w toku (2026-06-16). Plan v1 zatwierdzony po grillu + weryfikacji limitów $0 Cloudflare.
+Faza 0 ZROBIONA (commit 8c2b62a). Faza 1 — RDZEŃ DZIAŁA: spike push potwierdzony (status 201 z FCM,
+lokalnie mimo antywirusa). Pełny łańcuch front→Worker→push przebity end-to-end. Zostaje tylko test
+na realnym Androidzie + punktualność cronu, co wymaga wdrożenia (konto Cloudflare).
 Stack: Cloudflare Pages + Workers (Hono) + D1 + Cron + Web Push; front React+Vite+TS, Tailwind, TanStack Query.
-Auth = token aplikacyjny (NIE Cloudflare Access). Repo: git init done (gałąź `main`).
-Konto Cloudflare zakładamy dopiero w Fazie 4 — Faza 0–3 lecą lokalnie (`wrangler dev --local`).
+Auth = token aplikacyjny (NIE Cloudflare Access). Repo: git na gałęzi `main`.
+Konto Cloudflare potrzebne dopiero do testu push na realnym Androidzie (deploy) — sam SPIKE wysyłki
+push da się sprawdzić lokalnie na desktopowym Chrome (localhost = secure context).
+UWAGA środowisko: npm/wrangler wymaga `NODE_OPTIONS=--use-system-ca` (antywirus przechwytuje HTTPS).
 Pełne decyzje: `../../ai-os/projects/personal-organizer/decisions.md`. Plan: `~/.claude/plans/...structured-melody.md`.
 
 ## Model danych (D1)
@@ -15,23 +19,23 @@ Pełne decyzje: `../../ai-os/projects/personal-organizer/decisions.md`. Plan: `~
 
 ## Plan v1 — fazy
 
-### Faza 0 — Fundament
+### Faza 0 — Fundament ✅
 - [x] `git init` + `.gitignore`
-- [ ] P1: Scaffold `web/` (Vite + React + TS)
-- [ ] P1: Tailwind CSS w `web/` (ciemny, mobile-first)
-- [ ] P1: Scaffold `worker/` (Hono + `wrangler.toml`, binding D1)
-- [ ] P1: Migracja D1 ze schematem (lokalnie)
-- [ ] P1: `APP_TOKEN` (sekret) + middleware auth + ekran „klucza dostępu"
-- [ ] P1: Lokalny dev wstaje (`vite` + `wrangler dev`)
+- [x] Scaffold `web/` (Vite + React + TS) + Tailwind/router/TanStack Query
+- [x] Scaffold `worker/` (Hono + `wrangler.toml`, binding D1) + cron co minutę
+- [x] Migracja D1 ze schematem (lokalnie)
+- [x] `APP_TOKEN` + middleware auth + ekran „klucza dostępu" + klient API
+- [x] Lokalny dev wstaje (`vite` build OK + `wrangler dev` + /api/health 401/200)
 
-### Faza 1 — Pionowe przebicie: zadanie → cron → push (KRYTYCZNE, najpierw)
-- [ ] P1: **Spike** — udowodnić wysyłkę Web Push z Workera (Web Crypto, biblioteka Workers-compatible)
-- [ ] P1: VAPID — wygenerować klucze; prywatny jako sekret, publiczny do frontu
-- [ ] P1: Endpointy `POST/GET /api/tasks`, `POST /api/subscribe`
-- [ ] P1: Handler `scheduled` + Cron co minutę (wybór zadań „do przypomnienia teraz", `reminded_at`)
-- [ ] P1: Front — formularz zadania (data+godzina), zgoda na push, subskrypcja, SW (`injectManifest`)
-- [ ] P1: Deploy na Pages+Worker → test push na realnym Androidzie (zamknięta apka, punktualność)
-- [ ] P1: Obejście optymalizacji baterii (instrukcja + weryfikacja)
+### Faza 1 — Pionowe przebicie: zadanie → cron → push (KRYTYCZNE)
+- [x] **Spike** — Web Push z Workera działa: `@block65/webcrypto-web-push`, status 201 z FCM (lokalnie, mimo AV)
+- [x] VAPID — klucze wygenerowane; prywatny w `.dev.vars` (sekret), publiczny przez `GET /api/config`
+- [x] Endpointy `GET/POST/PATCH/DELETE /api/tasks`, `POST /api/subscribe`, `GET /api/config`, dev `POST /api/_dev/test-push`
+- [x] Handler `scheduled` + Cron co minutę (wybór zadań „do przypomnienia teraz", `reminded_at`)
+- [x] Front — formularz zadania (data+godzina), zgoda na push, subskrypcja, SW (`injectManifest`), TanStack Query
+- [ ] P1: Deploy na Pages+Worker → test push na realnym Androidzie (zamknięta apka, punktualność) — wymaga konta CF
+- [ ] P1: Test cronu (lokalnie: `curl .../cdn-cgi/handler/scheduled`; punktualność dopiero po deployu)
+- [ ] P1: Obejście optymalizacji baterii (instrukcja + weryfikacja) — po deployu
 
 ### Faza 2 — Zadania w pełni
 - [ ] P2: Zakładka „Zadania" (nadchodzące) + edycja/usuwanie + toggle „zrobione"

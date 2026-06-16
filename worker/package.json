@@ -10,10 +10,12 @@
     "migrate:remote": "wrangler d1 migrations apply personal-organizer --remote"
   },
   "dependencies": {
+    "@block65/webcrypto-web-push": "^1.0.2",
     "hono": "^4.12.18"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^4.20260616.1",
+    "typescript": "^6.0.3",
     "wrangler": "^4.100.0"
   }
 }
