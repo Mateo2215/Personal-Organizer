@@ -45,10 +45,11 @@ Pełne decyzje: `../../ai-os/projects/personal-organizer/decisions.md`. Plan: `~
 - [x] P2: Edycja treści/terminu zadania w UI (ołówek → inline form w TaskRow; mutacja `update` w useTaskActions; build OK)
 - [x] P3: Zadania bez terminu (due_at null) — DECYZJA: zostają tylko w „Zadania", „Dziś" pozostaje skupione (dziś+zaległe). Drzwi otwarte na sekcję „Bez terminu", jeśli w użyciu coś będzie umykać.
 
-### Faza 3 — Pomysły + projekty
-- [ ] P2: Projekty CRUD (dodaj/zmień nazwę/usuń → pomysły do Skrzynki)
-- [ ] P2: Przechwyt pomysłu (treść + wybór projektu z listy / nowy w locie)
-- [ ] P2: Lista pomysłów pogrupowana po projektach + Skrzynka
+### Faza 3 — Pomysły + projekty ✅ (backend smoke-tested; UI do klika na żywo)
+- [x] P2: Projekty CRUD (dodaj/zmień nazwę/usuń → pomysły do Skrzynki). Backend: GET/POST/PATCH/DELETE /api/projects; DELETE atomowo przez DB.batch przenosi pomysły do Skrzynki. Smoke test OK (project_id→null po usunięciu).
+- [x] P2: Przechwyt pomysłu (treść + wybór projektu z listy / nowy w locie). IdeaCapture.tsx + POST /api/ideas.
+- [x] P2: Edycja pomysłu (treść + przeniesienie do innego projektu/Skrzynki). IdeaItem.tsx (tryb edycji) + PATCH /api/ideas/:id. Smoke test OK (zmiana treści + move A→B, pusta treść→400).
+- [x] P2: Lista pomysłów pogrupowana po projektach + Skrzynka. Ideas.tsx (grupowanie) + ProjectGroup.tsx (nagłówek z rename/delete + wiersze). useIdeasData.ts (queries+mutacje).
 
 ### Faza 4 — Wykończenie + dowóz
 - [ ] P1: Manifest PWA + ikony (instalacja na ekran główny)

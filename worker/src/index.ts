@@ -1,5 +1,6 @@
 // Worker: API (Hono) + scheduled handler (cron → push).
 // Faza 1: konfiguracja VAPID, subskrypcje push, CRUD zadań, wysyłka push z crona.
+// Faza 3: CRUD projektów + pomysłów (usunięcie projektu → pomysły do Skrzynki).
 
 import { Hono } from "hono";
 import { cors } from "hono/cors";
@@ -102,6 +103,93 @@ app.patch("/api/tasks/:id", async (c) => {
 app.delete("/api/tasks/:id", async (c) => {
   const id = Number(c.req.param("id"));
   await c.env.DB.prepare("DELETE FROM tasks WHERE id = ?").bind(id).run();
+  return c.body(null, 204);
+});
+
+// --- Projekty (grupują pomysły; zadania w v1 bez projektów) ---
+app.get("/api/projects", async (c) => {
+  const res = await c.env.DB.prepare(
+    "SELECT * FROM projects ORDER BY name COLLATE NOCASE ASC",
+  ).all();
+  return c.json(res.results ?? []);
+});
+
+app.post("/api/projects", async (c) => {
+  const body = await c.req.json<{ name?: string }>();
+  const name = body.name?.trim();
+  if (!name) return c.json({ error: "name required" }, 400);
+  const row = await c.env.DB.prepare(
+    "INSERT INTO projects (name) VALUES (?) RETURNING *",
+  ).bind(name).first();
+  return c.json(row, 201);
+});
+
+app.patch("/api/projects/:id", async (c) => {
+  const id = Number(c.req.param("id"));
+  const body = await c.req.json<{ name?: string }>();
+  const name = body.name?.trim();
+  if (!name) return c.json({ error: "name required" }, 400);
+  const row = await c.env.DB.prepare(
+    "UPDATE projects SET name = ? WHERE id = ? RETURNING *",
+  ).bind(name, id).first();
+  if (!row) return c.json({ error: "not found" }, 404);
+  return c.json(row);
+});
+
+// Usunięcie projektu przenosi jego pomysły do Skrzynki (project_id = NULL), nie kasuje ich. Atomowo.
+app.delete("/api/projects/:id", async (c) => {
+  const id = Number(c.req.param("id"));
+  await c.env.DB.batch([
+    c.env.DB.prepare("UPDATE ideas SET project_id = NULL WHERE project_id = ?").bind(id),
+    c.env.DB.prepare("DELETE FROM projects WHERE id = ?").bind(id),
+  ]);
+  return c.body(null, 204);
+});
+
+// --- Pomysły (treść + automatyczny czas + opcjonalny projekt; NULL = Skrzynka) ---
+app.get("/api/ideas", async (c) => {
+  const res = await c.env.DB.prepare(
+    "SELECT * FROM ideas ORDER BY created_at DESC, id DESC",
+  ).all();
+  return c.json(res.results ?? []);
+});
+
+app.post("/api/ideas", async (c) => {
+  const body = await c.req.json<{ content?: string; project_id?: number | null }>();
+  const content = body.content?.trim();
+  if (!content) return c.json({ error: "content required" }, 400);
+  const projectId = body.project_id ?? null;
+  const row = await c.env.DB.prepare(
+    "INSERT INTO ideas (content, project_id) VALUES (?, ?) RETURNING *",
+  ).bind(content, projectId).first();
+  return c.json(row, 201);
+});
+
+app.patch("/api/ideas/:id", async (c) => {
+  const id = Number(c.req.param("id"));
+  const body = await c.req.json<{ content?: string; project_id?: number | null }>();
+
+  const sets: string[] = [];
+  const binds: unknown[] = [];
+  if (body.content !== undefined) {
+    const content = body.content.trim();
+    if (!content) return c.json({ error: "content required" }, 400);
+    sets.push("content = ?"); binds.push(content);
+  }
+  if (body.project_id !== undefined) { sets.push("project_id = ?"); binds.push(body.project_id ?? null); }
+  if (sets.length === 0) return c.json({ error: "nothing to update" }, 400);
+
+  binds.push(id);
+  const row = await c.env.DB.prepare(
+    `UPDATE ideas SET ${sets.join(", ")} WHERE id = ? RETURNING *`,
+  ).bind(...binds).first();
+  if (!row) return c.json({ error: "not found" }, 404);
+  return c.json(row);
+});
+
+app.delete("/api/ideas/:id", async (c) => {
+  const id = Number(c.req.param("id"));
+  await c.env.DB.prepare("DELETE FROM ideas WHERE id = ?").bind(id).run();
   return c.body(null, 204);
 });
 
