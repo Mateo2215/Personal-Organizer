@@ -47,3 +47,15 @@ zadania push przyszedł.
 przepłynąć. Tania kwerenda do bazy lokalizuje warstwę awarii szybciej niż zgadywanie po stronie wysyłki.
 **Jak stosować:** Przy „X nie działa" w łańcuchu zdarzeń — najpierw zweryfikuj dane wejściowe na każdym etapie
 (jest subskrypcja? jest rekord-trigger? ma właściwe flagi?), potem dopiero podejrzewaj mechanizm.
+
+## 2026-06-17 — Reużyj natywnej zależności z drugiego pakietu monorepo zamiast instalować nową
+**Co:** Do wygenerowania ikon PWA (SVG→PNG) potrzebny był `sharp`. Zamiast instalować go w `web/` (ciężki natywny
+pakiet, dodatkowe ryzyko pod AV), wykorzystałem `sharp` już obecny w `worker/node_modules` — skrypt
+`web/scripts/generate-icons.mjs` rozwiązuje go przez `createRequire(path.resolve(__dirname, "../../worker/package.json"))`.
+Dodatkowo geometria znaku „Postęp" jest **wklejona w skrypt** (nie czytana z `design/`), bo `design/` jest gitignore'owany
+— dzięki temu skrypt i regeneracja są samowystarczalne i committowalne.
+**Dlaczego ważne:** W monorepo natywna zależność zainstalowana w jednym workspace jest dostępna dla jednorazowych
+skryptów w innym — bez dublowania instalacji i bez nowego wektora problemów ze środowiskiem (AV/cert). Wklejenie
+danych źródłowych do skryptu uniezależnia artefakt od plików spoza repo.
+**Jak stosować:** Jednorazowy skrypt potrzebuje paczki, która już gdzieś w repo jest? `createRequire` z `package.json`
+tamtego workspace zamiast `npm install`. Jeśli skrypt zależy od czegoś gitignored — zinline'uj to, by działał bez tego pliku.
