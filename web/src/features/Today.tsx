@@ -5,10 +5,13 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, BellRing, Sparkles } from "lucide-react";
 import { useTasks, useTaskActions } from "./useTaskActions";
+import { useRoutines, useRoutineActions } from "./useRoutineActions";
 import { TaskRow } from "./TaskRow";
+import { RoutineRow } from "./RoutineRow";
 import { ProgressRing } from "../components/ProgressRing";
 import { EmptyState } from "../components/EmptyState";
 import { isOverdue, isToday } from "../lib/tasks";
+import { isDoneToday } from "../lib/routines";
 import { enablePush, notificationsGranted } from "../lib/push";
 
 // Data w formacie „pon · 16 cze" (wyświetlana uppercase przez CSS).
@@ -22,6 +25,8 @@ function todayEyebrow(): string {
 export function Today() {
   const { data: tasks, isLoading } = useTasks();
   const { toggle, remove, update } = useTaskActions();
+  const { data: routines, isLoading: routinesLoading } = useRoutines();
+  const { toggle: toggleRoutine } = useRoutineActions();
   const navigate = useNavigate();
 
   const [granted, setGranted] = useState(notificationsGranted());
@@ -44,16 +49,26 @@ export function Today() {
   const overdue = open.filter(isOverdue);
   const todays = open.filter((t) => !isOverdue(t) && isToday(t));
 
-  // Postęp dnia: zrobione / wszystkie dzisiejsze (niezależnie od statusu).
+  const allRoutines = routines ?? [];
+  const routinesDone = allRoutines.filter(isDoneToday).length;
+
+  // Postęp dnia: zrobione / wszystkie dzisiejsze — zadania z terminem na dziś + rutyny razem.
   const dayTasks = all.filter(isToday);
   const dayDone = dayTasks.filter((t) => t.status === "done").length;
+  const dayTotal = dayTasks.length + allRoutines.length;
+  const dayDoneTotal = dayDone + routinesDone;
 
   const toggleArgs = (id: number, status: "open" | "done") => ({
     id,
     status: status === "done" ? ("open" as const) : ("done" as const),
   });
 
-  const isEmpty = !isLoading && overdue.length === 0 && todays.length === 0;
+  const isEmpty =
+    !isLoading &&
+    !routinesLoading &&
+    allRoutines.length === 0 &&
+    overdue.length === 0 &&
+    todays.length === 0;
 
   return (
     <div className="space-y-4">
@@ -65,7 +80,7 @@ export function Today() {
             Dzień dobry 👋
           </h2>
         </div>
-        <ProgressRing done={dayDone} total={dayTasks.length} />
+        <ProgressRing done={dayDoneTotal} total={dayTotal} />
       </div>
 
       {!granted && (
@@ -93,6 +108,21 @@ export function Today() {
         />
       ) : (
         <>
+          {allRoutines.length > 0 && (
+            <section className="space-y-2.5">
+              <ul className="space-y-2.5">
+                {allRoutines.map((r) => (
+                  <RoutineRow
+                    key={r.id}
+                    routine={r}
+                    done={isDoneToday(r)}
+                    onToggle={() => toggleRoutine.mutate({ id: r.id, done: !isDoneToday(r) })}
+                  />
+                ))}
+              </ul>
+            </section>
+          )}
+
           {overdue.length > 0 && (
             <section className="space-y-2.5">
               <h3 className="flex items-center gap-2 text-[13px] font-bold text-alarm-text">

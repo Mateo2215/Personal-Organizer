@@ -106,6 +106,53 @@ app.delete("/api/tasks/:id", async (c) => {
   return c.body(null, 204);
 });
 
+// --- Rutyny (codzienne zadania bez godziny i bez push; reset dzienny po stronie frontu) ---
+app.get("/api/routines", async (c) => {
+  const res = await c.env.DB.prepare(
+    "SELECT * FROM routines ORDER BY created_at ASC, id ASC",
+  ).all();
+  return c.json(res.results ?? []);
+});
+
+app.post("/api/routines", async (c) => {
+  const body = await c.req.json<{ content?: string }>();
+  const content = body.content?.trim();
+  if (!content) return c.json({ error: "content required" }, 400);
+  const row = await c.env.DB.prepare(
+    "INSERT INTO routines (content) VALUES (?) RETURNING *",
+  ).bind(content).first();
+  return c.json(row, 201);
+});
+
+// PATCH obsługuje rename (content) ORAZ odhaczenie/odznaczenie (last_done_on = data lokalna lub null).
+app.patch("/api/routines/:id", async (c) => {
+  const id = Number(c.req.param("id"));
+  const body = await c.req.json<{ content?: string; last_done_on?: string | null }>();
+
+  const sets: string[] = [];
+  const binds: unknown[] = [];
+  if (body.content !== undefined) {
+    const content = body.content.trim();
+    if (!content) return c.json({ error: "content required" }, 400);
+    sets.push("content = ?"); binds.push(content);
+  }
+  if (body.last_done_on !== undefined) { sets.push("last_done_on = ?"); binds.push(body.last_done_on ?? null); }
+  if (sets.length === 0) return c.json({ error: "nothing to update" }, 400);
+
+  binds.push(id);
+  const row = await c.env.DB.prepare(
+    `UPDATE routines SET ${sets.join(", ")} WHERE id = ? RETURNING *`,
+  ).bind(...binds).first();
+  if (!row) return c.json({ error: "not found" }, 404);
+  return c.json(row);
+});
+
+app.delete("/api/routines/:id", async (c) => {
+  const id = Number(c.req.param("id"));
+  await c.env.DB.prepare("DELETE FROM routines WHERE id = ?").bind(id).run();
+  return c.body(null, 204);
+});
+
 // --- Projekty (grupują pomysły; zadania w v1 bez projektów) ---
 app.get("/api/projects", async (c) => {
   const res = await c.env.DB.prepare(
@@ -195,15 +242,17 @@ app.delete("/api/ideas/:id", async (c) => {
 
 // --- Eksport danych: wszystkie zadania, pomysły i projekty jako JSON do pobrania. ---
 app.get("/api/export", async (c) => {
-  const [tasksRes, ideasRes, projectsRes] = await Promise.all([
+  const [tasksRes, ideasRes, projectsRes, routinesRes] = await Promise.all([
     c.env.DB.prepare("SELECT * FROM tasks ORDER BY created_at ASC, id ASC").all(),
     c.env.DB.prepare("SELECT * FROM ideas ORDER BY created_at ASC, id ASC").all(),
     c.env.DB.prepare("SELECT * FROM projects ORDER BY name COLLATE NOCASE ASC").all(),
+    c.env.DB.prepare("SELECT * FROM routines ORDER BY created_at ASC, id ASC").all(),
   ]);
   return c.json({
     tasks: tasksRes.results ?? [],
     ideas: ideasRes.results ?? [],
     projects: projectsRes.results ?? [],
+    routines: routinesRes.results ?? [],
   });
 });
 

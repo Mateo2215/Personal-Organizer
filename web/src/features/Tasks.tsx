@@ -2,10 +2,13 @@
 
 import { useState, type FormEvent } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Calendar, ListChecks } from "lucide-react";
+import { Calendar, ListChecks, Repeat } from "lucide-react";
 import { addTask, localInputToUtcIso, isOverdue, isToday, isUpcoming } from "../lib/tasks";
+import { isDoneToday } from "../lib/routines";
 import { useTasks, useTaskActions } from "./useTaskActions";
+import { useRoutines, useRoutineActions } from "./useRoutineActions";
 import { TaskRow } from "./TaskRow";
+import { RoutineRow } from "./RoutineRow";
 import { EmptyState } from "../components/EmptyState";
 
 type Filter = "all" | "today" | "upcoming";
@@ -33,9 +36,24 @@ export function TasksPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["tasks"] }),
   });
 
+  const { data: routines } = useRoutines();
+  const { add: addRoutine, rename: renameRoutine, remove: removeRoutine, toggle: toggleRoutine } =
+    useRoutineActions();
+
   const [content, setContent] = useState("");
   const [due, setDue] = useState("");
   const [filter, setFilter] = useState<Filter>("all");
+  const [routineContent, setRoutineContent] = useState("");
+
+  function submitRoutine(e: FormEvent) {
+    e.preventDefault();
+    const text = routineContent.trim();
+    if (!text) return;
+    addRoutine.mutate(text, {
+      // Czyścimy pole dopiero po udanym zapisie — przy błędzie treść zostaje.
+      onSuccess: () => setRoutineContent(""),
+    });
+  }
 
   function submit(e: FormEvent) {
     e.preventDefault();
@@ -133,6 +151,52 @@ export function TasksPage() {
           )}
         </ul>
       )}
+
+      {/* Codzienne (rutyny) — powtarzalne zadania bez godziny i bez push; odhaczasz je w „Dziś". */}
+      <section className="space-y-3 pt-2">
+        <h3 className="flex items-center gap-2 text-[13px] font-bold text-subtle">
+          <Repeat size={15} strokeWidth={2.5} className="text-accent" />
+          Codzienne
+        </h3>
+
+        <form onSubmit={submitRoutine} className="flex items-center gap-2 rounded-[18px] border border-card-border bg-card p-[13px]">
+          <input
+            value={routineContent}
+            onChange={(e) => setRoutineContent(e.target.value)}
+            placeholder="Nowa codzienna rutyna…"
+            className="w-full bg-transparent text-ink placeholder:text-placeholder outline-none"
+          />
+          <button
+            type="submit"
+            disabled={addRoutine.isPending || !routineContent.trim()}
+            className="accent-gradient shrink-0 rounded-[14px] px-5 py-2 text-sm font-bold text-white disabled:opacity-50"
+          >
+            {addRoutine.isPending ? "Dodaję…" : "Dodaj"}
+          </button>
+        </form>
+        {addRoutine.isError && (
+          <p className="text-sm text-alarm-text">Nie udało się zapisać — treść zachowana, spróbuj ponownie.</p>
+        )}
+
+        {(routines ?? []).length === 0 ? (
+          <p className="text-sm text-faint">
+            Brak rutyn. Dodaj powtarzalne obowiązki bez godziny — pojawią się na górze „Dziś".
+          </p>
+        ) : (
+          <ul className="space-y-2.5">
+            {(routines ?? []).map((r) => (
+              <RoutineRow
+                key={r.id}
+                routine={r}
+                done={isDoneToday(r)}
+                onToggle={() => toggleRoutine.mutate({ id: r.id, done: !isDoneToday(r) })}
+                onRename={(text) => renameRoutine.mutateAsync({ id: r.id, content: text })}
+                onDelete={() => removeRoutine.mutate(r.id)}
+              />
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }

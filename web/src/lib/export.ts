@@ -7,6 +7,7 @@ interface ExportData {
   tasks: unknown[];
   ideas: unknown[];
   projects: unknown[];
+  routines: unknown[];
 }
 
 export async function downloadExport(): Promise<void> {

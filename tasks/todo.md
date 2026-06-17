@@ -6,6 +6,8 @@ zdeployowana przez **Workers Builds podpięte do GitHuba** (build w chmurze CF, 
 **Push POTWIERDZONY na realnym Androidzie przy ZAMKNIĘTEJ apce** (user, 2026-06-17): powiadomienie przyszło
 punktualnie (~1 min po terminie, czyli cykl crona). PWA zainstalowana na ekranie głównym. Strefa czasowa zweryfikowana
 (lokalny→UTC poprawne). Rdzeń v1 (Fazy 0–3) + dowóz (Faza 4) = kompletne i używalne.
+**Redesign „Aurora" + 6 poprawek z dogfoodingu — zweryfikowane na telefonie przez usera (2026-06-17).** Apka jest w realnym
+codziennym użyciu. Następny krok to NIE kosmetyka, lecz brakujące funkcje pod codzienne użycie (zadania codzienne, kalendarz) — przez brainstorming.
 Stack: Cloudflare Workers (Hono) + D1 + Cron + Web Push + Workers Static Assets; front React+Vite+TS, Tailwind, TanStack Query.
 Auth = token aplikacyjny (NIE Cloudflare Access). Repo: GitHub `Mateo2215/Personal-Organizer`, gałąź `main` (push→auto-redeploy).
 UWAGA środowisko (dot. tylko LOKALNEGO dev): npm/wrangler wymaga `NODE_OPTIONS=--use-system-ca` (Avast+Norton przechwytują HTTPS).
@@ -33,9 +35,9 @@ Deploy NIE używa już lokalnego toolchainu. Pełne decyzje: `../../ai-os/projec
 - [x] Endpointy `GET/POST/PATCH/DELETE /api/tasks`, `POST /api/subscribe`, `GET /api/config`, dev `POST /api/_dev/test-push`
 - [x] Handler `scheduled` + Cron co minutę (wybór zadań „do przypomnienia teraz", `reminded_at`)
 - [x] Front — formularz zadania (data+godzina), zgoda na push, subskrypcja, SW (`injectManifest`), TanStack Query
-- [ ] P1: Deploy na Pages+Worker → test push na realnym Androidzie (zamknięta apka, punktualność) — wymaga konta CF
-- [ ] P1: Test cronu (lokalnie: `curl .../cdn-cgi/handler/scheduled`; punktualność dopiero po deployu)
-- [ ] P1: Obejście optymalizacji baterii (instrukcja + weryfikacja) — po deployu
+- [x] P1: Deploy + test push na realnym Androidzie (zamknięta apka, punktualność) — ZREALIZOWANE inną ścieżką (Workers Builds + GitHub, nie Pages+Worker). Patrz Blok C poniżej. Checkbox zaszłościowy.
+- [x] P1: Test cronu — push przyszedł ~1 min po terminie = potwierdzony cykl crona na produkcji (Blok C). Checkbox zaszłościowy.
+- [ ] P1: Obejście optymalizacji baterii (instrukcja + weryfikacja) — śledzone jako C4 poniżej (weryfikacja po długim idle, user-side).
 
 ### Faza 2 — Zadania w pełni (głównie zrobione)
 - [x] Dolna nawigacja (Dziś / Zadania / Pomysły) + Layout + react-router
@@ -84,11 +86,14 @@ Build w CI: skrypt `worker` `ci:build` (instaluje front+worker, buduje front), d
 - [x] C3 P1: Push PRZYSZEDŁ przy zamkniętej apce, punktualnie (~1 min = cykl crona). Strefa OK (13:49 UTC = 15:49 PL).
 - [ ] C4 P2: Obejście optymalizacji baterii — NIEZWERYFIKOWANE przez dłuższy idle. Push zadziałał po krótkim czasie;
       do sprawdzenia w realnym użyciu czy dochodzi też po wielogodzinnym uśpieniu telefonu (open question).
-- [ ] C5 P1: Kontrola limitów $0 w dashboardzie (Workers requests, D1, cron 1440/dobę) — jeszcze nie sprawdzone.
+- [x] C5 P1: Kontrola limitów $0 w dashboardzie — POTWIERDZONE 2026-06-17. Plan Workers Free, BRAK karty (fail-closed OK).
+      ~360 requests/~6h (cron co minutę + wejścia usera) = <0,5% progu 100k/dobę. Cron „every minute" działa. Ogromny zapas.
+      Uwaga: mapa „Request Distribution" pokazuje też region Indie — to cron (wewnętrzna infra CF, nieprzypisana lokalnie)
+      i/lub szum botów na publiczny URL; nieszkodliwe (całe /api/* za tokenem → 401 bez niego, front bez sekretów).
 
 **Drobny dług / robustness:**
-- [ ] P3: `Today.tsx onEnablePush` nie łapie wyjątku z `enablePush()` — przy błędzie (np. `/api/config`) UI zostaje na
-      „Włączam…". Owinąć w try/catch i pokazać komunikat błędu.
+- [x] P3: `Today.tsx onEnablePush` owinięty w try/catch — przy błędzie (np. `/api/config`) UI nie utyka na „Włączam…",
+      pokazuje komunikat błędu. Zweryfikowane w kodzie 2026-06-17 (`Today.tsx:30-39`). Domknięte przy redesignie Aurora.
 
 ## Redesign Aurora — fazy (A4, w toku od 2026-06-17)
 Kierunek „Aurora": ciemny `#0b0a12`, fioletowy gradient akcentu (`#9a86ff`→`#b06bff`), glassmorphism,
@@ -115,6 +120,33 @@ rozstrzygane „handoff/prototyp logo = źródło prawdy" (logo 66px/radius21, g
 - [x] Po redesignie: ikony PWA wygenerowane (192/512/maskable + apple-touch + favicon.svg) skryptem `web/scripts/generate-icons.mjs`
       (sharp z worker/node_modules; geometria znaku wklejona, niezależna od `design/`). theme/bg color = `#0b0a12`. Build kopiuje do `dist`, manifest OK. Domyka „ikony niewgrane".
 - [ ] Otwarte do oceny w użyciu: wymiar logo (przyjęto 66px/radius21 z prototypu), gradient przycisków `#b06bff`.
+
+## Poprawki z dogfoodingu (2026-06-17, sesja 2) — WYPCHNIĘTE + ZWERYFIKOWANE NA TELEFONIE ✅
+Feedback właściciela po realnym użyciu redesignu „Aurora". Commit `fd9a54a` na `main` → auto-redeploy CF. Build+lint czyste.
+- [x] Pomysły: pusta Skrzynka znika (renderowana tylko gdy ma pomysły — `Ideas.tsx`). To systemowy kosz, nie projekt; pusty nie wisi.
+- [x] Pomysły: sekcja przechwytu się wyróżnia — nagłówek „NOWY POMYSŁ" + akcentowy kontur/poświata + pole w ramce, placeholder „Co chodzi Ci po głowie?" (`IdeaCapture.tsx`). Adresuje „nie widać gdzie dodać".
+- [x] Pomysły: formularz nowego projektu — pole full-width, `Anuluj`/`Dodaj` w osobnym rzędzie → „Anuluj" nie wychodzi poza ramkę.
+- [x] Zadania: dekoracyjna ikona „+" (czytana jako martwy przycisk) → `ListChecks` (`Tasks.tsx`).
+- [x] Nagłówek (cała apka): logo Aurora (`AppIcon`) przy „Personal Organizer" — wordmark przestał być smutnym szarym tekstem (`Layout.tsx`).
+- [x] Nagłówek: Eksport + Wyloguj przeniesione do menu (⋮) z panelem; dolny pasek został przy 3 widokach (`Layout.tsx`).
+
+## Faza 5 — Zadania codzienne (rutyny) — ZAIMPLEMENTOWANE (2026-06-17), do weryfikacji na żywo + deploy
+Brainstorm domknięty: świat „tylko dziś" bez historii, osobna tabela `routines`, reset przez porównanie daty
+(bez crona), jeden ekran „Dziś" (rutyny na górze, ↻), zarządzanie w „Zadania", bez push. Pełne decyzje:
+`../../ai-os/projects/personal-organizer/decisions.md` („2026-06-17 — Zadania codzienne (rutyny)").
+Cron/push NIE ruszane (świadoma izolacja). Build (tsc+vite+PWA) + ESLint + typecheck worker = czyste.
+
+- [x] P1: Migracja `worker/migrations/0002_routines.sql` (tabela `routines`: content, last_done_on, created_at).
+- [x] P1: Backend — endpointy `GET/POST/PATCH/DELETE /api/routines` (lustro wzorca tasks) + `routines` w `GET /api/export`.
+- [x] P1: Front model+akcje — `lib/routines.ts` (`todayLocalDate`/`isDoneToday`, data LOKALNA nie UTC) + `useRoutineActions.ts`.
+- [x] P1: `RoutineRow.tsx` (checkbox + ↻; tryb zarządzania = rename inline + usuń) + render na „Dziś" (góra, pierścień liczy rutyny+zadania, EmptyState gdy brak rutyn ORAZ zaległych ORAZ dzisiejszych).
+- [x] P2: Sekcja „Codzienne" w `Tasks.tsx` (composer + lista z rename/delete).
+- [x] P2: `routines` w `lib/export.ts` (ExportData).
+- [ ] P1 (USER, panel): wklej `0002_routines.sql` w **D1 Console** na produkcji (jak `0001`), potem push na `main` → auto-redeploy.
+- [ ] P1 (live): smoke API z tokenem (`POST/GET/PATCH last_done_on/DELETE /api/routines`, `/api/export` ma `routines`) + przejście UI na telefonie (dodaj rutynę → góra „Dziś" → odhacz → pierścień rośnie → następnego dnia wraca).
+
+## Zgłoszone braki → na kolejną sesję
+- [ ] P2: **Widok kalendarza** — podgląd zaplanowanych rzeczy na kolejne dni (osobna sesja, prawdopodobnie po brainstormie).
 
 ## Świadomie później (v2+)
 - [ ] P3: „Przypomnij X minut wcześniej"
