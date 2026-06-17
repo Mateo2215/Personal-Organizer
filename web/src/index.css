@@ -1,9 +1,45 @@
 @import "tailwindcss";
 
-/* Ciemny motyw jako domyślny (decyzja designu v1), jeden kolor akcentu. */
+/*
+  Motyw „Aurora" — ciemny, fioletowy gradient akcentu, glassmorphism.
+  Tailwind v4: tokeny designu definiujemy tutaj przez @theme (NIE w tailwind.config.js).
+  Z każdego --color-* Tailwind generuje utilities bg-*/text-*/border-*.
+*/
+@theme {
+  /* Tło i powierzchnie */
+  --color-base: #0b0a12;
+  --color-card: rgb(255 255 255 / 0.045);
+  --color-card-border: rgb(255 255 255 / 0.08);
+  --color-card-hover: rgb(255 255 255 / 0.14);
+  --color-field: rgb(0 0 0 / 0.25);
+
+  /* Tekst */
+  --color-ink: #f4f2fb;
+  --color-muted: #9a96ad;
+  --color-faint: #6f6b80;
+  --color-placeholder: #7b7790;
+  --color-subtle: #cbc7d9;
+
+  /* Akcent (fiolet) */
+  --color-accent: #a797ff;
+  --color-accent-bright: #b6a8ff;
+  --color-accent-soft: #bcaeff;
+  --color-accent-from: #9a86ff;
+  --color-accent-to: #b06bff;
+
+  /* Alarm / zaległe */
+  --color-alarm: #ff6f8e;
+  --color-alarm-text: #ff8ba3;
+  --color-alarm-bg: rgb(255 90 118 / 0.09);
+  --color-alarm-border: rgb(255 90 118 / 0.24);
+
+  /* Typografia */
+  --font-sans: "Manrope", system-ui, sans-serif;
+  --font-display: "Space Grotesk", system-ui, sans-serif;
+}
+
 :root {
   color-scheme: dark;
-  --accent: #6366f1;
 }
 
 html,
@@ -14,8 +50,27 @@ body,
 
 body {
   margin: 0;
-  background-color: #0a0a0a;
-  color: #f5f5f5;
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background-color: #0b0a12;
+  /* Poświata za nagłówkiem (radial), przyklejona do viewportu by nie skakać przy scrollu */
+  background-image: radial-gradient(
+    520px 300px at 50% 8%,
+    rgb(150 108 255 / 0.22),
+    transparent 70%
+  );
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  color: #f4f2fb;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
+}
+
+/* Klasy pomocnicze — powtarzalny gradient akcentu i jego poświata (przyciski, ikona logo). */
+.accent-gradient {
+  background-image: linear-gradient(135deg, #9a86ff, #b06bff);
+}
+.accent-glow {
+  box-shadow: 0 12px 28px -8px rgb(150 108 255 / 0.6);
+}
+.logo-glow {
+  box-shadow: 0 16px 40px -8px rgb(150 108 255 / 0.7);
 }

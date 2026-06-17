@@ -1,14 +1,24 @@
-// Powłoka apki: nagłówek + treść zakładki (Outlet) + dolna nawigacja.
+// Powłoka apki: nagłówek (tytuł ekranu + akcje) + treść zakładki (Outlet) + dolna nawigacja.
 
 import { useState } from "react";
-import { Outlet } from "react-router-dom";
+import { Outlet, useLocation } from "react-router-dom";
+import { ArrowDownToLine, LogOut } from "lucide-react";
 import { BottomNav } from "./BottomNav";
 import { clearToken } from "../lib/token";
 import { downloadExport } from "../lib/export";
 
+// Tytuł nagłówka zależny od aktywnego ekranu (wg specyfikacji App Header).
+const TITLES: Record<string, string> = {
+  "/": "Personal Organizer",
+  "/tasks": "Zadania",
+  "/ideas": "Pomysły",
+};
+
 export function Layout() {
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
+  const { pathname } = useLocation();
+  const title = TITLES[pathname] ?? "Personal Organizer";
 
   function logout() {
     clearToken();
@@ -29,25 +39,30 @@ export function Layout() {
 
   return (
     <div className="mx-auto flex min-h-full max-w-md flex-col">
-      <header className="flex items-center justify-between px-4 py-3">
-        <h1 className="text-lg font-semibold">Personal Organizer</h1>
-        <div className="flex items-center gap-3">
+      <header className="flex items-center justify-between px-5 pb-3 pt-1.5">
+        <h1 className="font-display text-[17px] font-semibold tracking-[-0.02em] text-ink">{title}</h1>
+        <div className="flex items-center gap-1">
           <button
             onClick={onExport}
             disabled={isExporting}
-            className="text-xs text-neutral-500 hover:text-neutral-300 disabled:opacity-40"
+            aria-label="Eksportuj dane"
+            title="Eksportuj dane"
+            className="-m-1 p-2 text-muted transition-colors hover:text-accent disabled:opacity-40"
           >
-            {isExporting ? "Eksportuję…" : "Eksportuj"}
+            <ArrowDownToLine size={19} strokeWidth={2} />
           </button>
-          <button onClick={logout} className="text-xs text-neutral-500 hover:text-neutral-300">
-            Wyloguj
+          <button
+            onClick={logout}
+            aria-label="Wyloguj"
+            title="Wyloguj"
+            className="-m-1 p-2 text-muted transition-colors hover:text-accent"
+          >
+            <LogOut size={19} strokeWidth={2} />
           </button>
         </div>
       </header>
-      {exportError && (
-        <p className="px-4 pb-1 text-xs text-red-400">{exportError}</p>
-      )}
-      <main className="flex-1 px-4 pb-24">
+      {exportError && <p className="px-5 pb-1 text-xs text-alarm-text">{exportError}</p>}
+      <main className="flex-1 px-[18px] pb-28">
         <Outlet />
       </main>
       <BottomNav />

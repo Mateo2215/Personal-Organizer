@@ -1,15 +1,15 @@
 # Personal Organizer — Todo
 
 ## Current State
-Faza 0 ZROBIONA (commit 8c2b62a). Faza 1 — RDZEŃ DZIAŁA: spike push potwierdzony (status 201 z FCM,
-lokalnie mimo antywirusa). Pełny łańcuch front→Worker→push przebity end-to-end. Zostaje tylko test
-na realnym Androidzie + punktualność cronu, co wymaga wdrożenia (konto Cloudflare).
-Stack: Cloudflare Pages + Workers (Hono) + D1 + Cron + Web Push; front React+Vite+TS, Tailwind, TanStack Query.
-Auth = token aplikacyjny (NIE Cloudflare Access). Repo: git na gałęzi `main`.
-Konto Cloudflare potrzebne dopiero do testu push na realnym Androidzie (deploy) — sam SPIKE wysyłki
-push da się sprawdzić lokalnie na desktopowym Chrome (localhost = secure context).
-UWAGA środowisko: npm/wrangler wymaga `NODE_OPTIONS=--use-system-ca` (antywirus przechwytuje HTTPS).
-Pełne decyzje: `../../ai-os/projects/personal-organizer/decisions.md`. Plan: `~/.claude/plans/...structured-melody.md`.
+**WDROŻONE NA PRODUKCJĘ I DZIAŁA (2026-06-17).** Apka żyje na Cloudflare (jeden Worker serwuje front+API+cron),
+zdeployowana przez **Workers Builds podpięte do GitHuba** (build w chmurze CF, bez lokalnego wranglera — omija antywirusa).
+**Push POTWIERDZONY na realnym Androidzie przy ZAMKNIĘTEJ apce** (user, 2026-06-17): powiadomienie przyszło
+punktualnie (~1 min po terminie, czyli cykl crona). PWA zainstalowana na ekranie głównym. Strefa czasowa zweryfikowana
+(lokalny→UTC poprawne). Rdzeń v1 (Fazy 0–3) + dowóz (Faza 4) = kompletne i używalne.
+Stack: Cloudflare Workers (Hono) + D1 + Cron + Web Push + Workers Static Assets; front React+Vite+TS, Tailwind, TanStack Query.
+Auth = token aplikacyjny (NIE Cloudflare Access). Repo: GitHub `Mateo2215/Personal-Organizer`, gałąź `main` (push→auto-redeploy).
+UWAGA środowisko (dot. tylko LOKALNEGO dev): npm/wrangler wymaga `NODE_OPTIONS=--use-system-ca` (Avast+Norton przechwytują HTTPS).
+Deploy NIE używa już lokalnego toolchainu. Pełne decyzje: `../../ai-os/projects/personal-organizer/decisions.md`.
 
 ## Model danych (D1)
 - `projects` (id, name, created_at)
@@ -64,27 +64,57 @@ względne `/api/*` działają bez zmian, jeden deploy. (decyzja 2026-06-16, patr
       Zweryfikowane `wrangler deploy --dry-run`: 10 plików z dist, binding D1 OK, config waliduje się.
 - [x] A3 P2: Eksport danych. Worker `GET /api/export` → JSON `{tasks, ideas, projects}` (bez subskrypcji).
       Front: `lib/export.ts` + guzik „Eksportuj" w `Layout.tsx` (header). Build tsc+vite OK.
-- [ ] A4 P2: Przejście designem (ciemny/minimal, wytyczne `pretty`) — ODŁOŻONE NA PO DEPLOYU (decyzja 2026-06-16):
-      deploy najpierw na obecnym UI, design pass po kilku dniach realnego użycia (zobaczyć co uwiera). Ikony z Claude Design wgrać przy okazji.
+- [~] A4 P2: Przejście designem — W TOKU (2026-06-17). Realizowane jako **redesign „Aurora"** wg handoffów
+      w `design/` (NIE commitujemy tego folderu — dodany do `.gitignore`). Rozpiska niżej: „Redesign Aurora — fazy".
 - [x] A5 P1: Checklista komend Bloku B — `personal-organizer/DEPLOY.md`.
 
 **Blok B — deploy przez GitHub + panel Cloudflare (ZMIANA 2026-06-17: bez terminala/wranglera lokalnie).**
 Powód: antywirus (Avast+Norton, skanowanie HTTPS) psuje lokalny npm/wrangler; build w chmurze CF omija problem.
 Build w CI: skrypt `worker` `ci:build` (instaluje front+worker, buduje front), deploy `npx wrangler deploy`. Szczegóły: `DEPLOY.md`.
 - [x] B1: Kod na GitHubie (`main`, `Mateo2215/Personal-Organizer`) — prep CI wypchnięty.
-- [ ] B2 (USER, panel): D1 SQL Database → Create `personal-organizer` → skopiować Database ID.
-- [ ] B3: Wpisać Database ID do `wrangler.toml` (placeholder) → commit + push.
-- [ ] B4 (USER, panel): D1 → Console → wkleić `worker/migrations/0001_init.sql` → Execute (schemat).
-- [ ] B5 (USER, panel): Workers & Pages → Import a repository → repo Personal-Organizer; root `worker`,
-      build `npm run ci:build`, deploy `npx wrangler deploy`, branch `main` → Save and Deploy.
-- [ ] B6 (USER, panel): Worker → Settings → Variables and Secrets → APP_TOKEN (losowy) + 3× VAPID z `.dev.vars`.
+- [x] B2 (USER, panel): D1 `personal-organizer` utworzona, Database ID w `wrangler.toml`.
+- [x] B3: Database ID wpisany i wypchnięty (commit b9dee7d).
+- [x] B4 (USER, panel): schemat założony przez D1 Console (4 tabele potwierdzone `/tables`).
+- [x] B5 (USER, panel): Workers Builds podłączony (root `worker`, build `npm run ci:build`, deploy `npx wrangler deploy`, branch `main`). Build success.
+- [x] B6 (USER, panel): sekrety wgrane (APP_TOKEN + 3× VAPID). Apka odpowiada na produkcji (user: „działa").
 
 **Blok C — weryfikacja na Androidzie (wspólnie):**
-- [ ] C1 P1: Otworzyć adres na telefonie → wpisać APP_TOKEN → zainstalować PWA na ekran główny.
-- [ ] C2 P1: Włączyć powiadomienia (subskrypcja push).
-- [ ] C3 P1: Zadanie na ~2 min → zamknąć apkę → push przychodzi? Punktualność cronu.
-- [ ] C4 P1: Obejście optymalizacji baterii (instrukcja + weryfikacja przy zamkniętej apce).
-- [ ] C5 P1: Kontrola limitów $0 w dashboardzie (Workers requests, D1, cron 1440/dobę).
+- [x] C1 P1: PWA zainstalowana na ekranie głównym, logowanie tokenem działa.
+- [x] C2 P1: Powiadomienia włączone (zgoda dana, 2 subskrypcje zapisane w D1).
+- [x] C3 P1: Push PRZYSZEDŁ przy zamkniętej apce, punktualnie (~1 min = cykl crona). Strefa OK (13:49 UTC = 15:49 PL).
+- [ ] C4 P2: Obejście optymalizacji baterii — NIEZWERYFIKOWANE przez dłuższy idle. Push zadziałał po krótkim czasie;
+      do sprawdzenia w realnym użyciu czy dochodzi też po wielogodzinnym uśpieniu telefonu (open question).
+- [ ] C5 P1: Kontrola limitów $0 w dashboardzie (Workers requests, D1, cron 1440/dobę) — jeszcze nie sprawdzone.
+
+**Drobny dług / robustness:**
+- [ ] P3: `Today.tsx onEnablePush` nie łapie wyjątku z `enablePush()` — przy błędzie (np. `/api/config`) UI zostaje na
+      „Włączam…". Owinąć w try/catch i pokazać komunikat błędu.
+
+## Redesign Aurora — fazy (A4, w toku od 2026-06-17)
+Kierunek „Aurora": ciemny `#0b0a12`, fioletowy gradient akcentu (`#9a86ff`→`#b06bff`), glassmorphism,
+fonty Space Grotesk + Manrope, ikony lucide-react, logo „Postęp" (pierścień + check). Źródło prawdy:
+handoffy w `design/` (`dashboard/README.md`, `logo/README.md` + prototypy `.dc.html`). Redesign czysto
+wizualny — model danych i logika bez zmian (wyjątek: funkcjonalne filtry w Fazie 6, świadomie dodane).
+
+**Decyzje sesji (2026-06-17):** stopka logowania = USUNĄĆ (Cloudflare Access było tylko w specu, sprzeczne z auth tokenem);
+filtry Zadań = WDROŻYĆ funkcjonalnie; tryb pracy = fazami z potwierdzeniem. Drobne niespójności specu
+rozstrzygane „handoff/prototyp logo = źródło prawdy" (logo 66px/radius21, gradient przycisków `#b06bff`, znak = „Postęp" nie gwiazdka).
+
+- [x] Faza 0: `design/` → `.gitignore` (nie commitujemy); plan w todo.
+- [x] Faza 1: Fundament — instalacja `@fontsource/space-grotesk`+`@fontsource/manrope`+`lucide-react`;
+      tokeny Aurora w `index.css` przez `@theme`; tło+poświata+fonty na `body`; usunięty martwy `App.css`;
+      komponent `Logo.tsx` (`LogoMark` + `AppIcon`). Build OK.
+- [x] Faza 2: Shell — `BottomNav.tsx` (ikony Lucide, blur, safe-area, kolory akcentu) + `Layout.tsx` (ikony eksport/wyloguj per-ekran tytuł Space Grotesk). Build OK.
+- [x] Faza 3: `AccessGate.tsx` — logo+poświata, glass pole z kłódką, gradient przycisk, BEZ stopki.
+- [x] Faza 4: `TaskRow.tsx` — okrągły custom checkbox (gradient dla done), karty glass zwykła/alarmowa, stany done/zaległe, ikony Lucide.
+- [x] Faza 5: `Today.tsx` — nagłówek dnia (data eyebrow + powitanie) + `ProgressRing.tsx` (SVG), sekcja zaległych z glow, przycisk „Dorzuć pomysł" (dashed).
+- [x] Faza 6: `Tasks.tsx` — composer w karcie (chip daty: styled label nad ukrytym datetime-local) + funkcjonalne chipy filtrów (Wszystkie/Dziś/Nadchodzące) + helper `isUpcoming` w `lib/tasks`.
+- [x] Faza 7: Pomysły — `IdeaCapture`/`IdeaItem` (natywny select ostylowany `appearance-none`+chevron — świadomie, zamiast custom dropdownu: dostępny i naturalny na Androidzie), `ProjectGroup` (licznik-pigułka, inbox), ikony Lucide.
+- [x] Faza 8: `EmptyState.tsx` (aura+tytuł+opis+akcje) w Dziś/Zadania/Pomysły; hover transitions na kartach; gradient tła. Build+lint czyste.
+- [x] Dług P3 domknięty przy okazji: `Today.onEnablePush` owinięty w try/catch (UI nie utyka na „Włączam…").
+- [x] Po redesignie: ikony PWA wygenerowane (192/512/maskable + apple-touch + favicon.svg) skryptem `web/scripts/generate-icons.mjs`
+      (sharp z worker/node_modules; geometria znaku wklejona, niezależna od `design/`). theme/bg color = `#0b0a12`. Build kopiuje do `dist`, manifest OK. Domyka „ikony niewgrane".
+- [ ] Otwarte do oceny w użyciu: wymiar logo (przyjęto 66px/radius21 z prototypu), gradient przycisków `#b06bff`.
 
 ## Świadomie później (v2+)
 - [ ] P3: „Przypomnij X minut wcześniej"

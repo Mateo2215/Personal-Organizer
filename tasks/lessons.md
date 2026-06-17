@@ -25,3 +25,25 @@ prawdopodobnie nie trzeba migracji, wystarczy endpoint + UI. Nową migrację ró
 dopóki nie ustawi się `NODE_OPTIONS=--use-system-ca` (Node używa wtedy magazynu certyfikatów Windows).
 **Jak stosować:** Prefiksuj komendy w tym repo `$env:NODE_OPTIONS="--use-system-ca"`. Globalny kontekst
 tego problemu: pamięć `project_node_https_av_interception`.
+
+## 2026-06-17 — Deploy w chmurze (Workers Builds + GitHub) omija antywirusa całkowicie
+**Co:** Lokalny `wrangler deploy` cierpi przez AV (Avast+Norton, przechwytywanie HTTPS). Zamiast walczyć z tym,
+przełączyliśmy deploy na **Workers Builds podpięte do repo GitHub**: push na `main` → Cloudflare buduje i deployuje
+**u siebie na Linuxie** (zero AV, zero lokalnego toolchainu sieciowego). Konfiguracja: root dir `worker`,
+build `npm run ci:build` (instaluje deps web+worker, buduje front), deploy `npx wrangler deploy`. Skrypt `ci:build`
+dodany do `worker/package.json`. Wszystko inne (D1, schemat, sekrety) klikane w panelu — bez terminala.
+**Dlaczego ważne:** Przeszkoda środowiskowa (AV) nie musi blokować dowozu — przeniesienie buildu do CF cloud
+rozwiązuje ją u źródła. Git push działa mimo AV (inny magazyn cert / schannel). Lokalny dev wciąż wymaga
+`--use-system-ca`, ale to osobna sprawa od deployu.
+**Jak stosować:** Następne deploye = `git push` (z VS Code Source Control albo przez agenta). Nie wracaj do
+lokalnego `npm run deploy`, chyba że świadomie. Zmiana database_id/wrangler.toml → commit+push → auto-redeploy.
+
+## 2026-06-17 — „Push nie działa" okazało się „nie było czego wysłać" (diagnozuj input, nie tylko pipeline)
+**Co:** Objaw „powiadomienia nie działają". Zamiast od razu grzebać w VAPID/cronie, rozdzieliłem łańcuch:
+subskrypcje w D1 (`SELECT COUNT(*) FROM push_subscriptions` = 2 → klient OK) vs zadania (`tasks` PUSTA → brak
+kandydata do push). Sedno: cron nie miał czego wysłać, bo nie było zadania z terminem. Po utworzeniu poprawnego
+zadania push przyszedł.
+**Dlaczego ważne:** Zanim uznasz pipeline za zepsuty, potwierdź że jest prawidłowy INPUT, który ma przez niego
+przepłynąć. Tania kwerenda do bazy lokalizuje warstwę awarii szybciej niż zgadywanie po stronie wysyłki.
+**Jak stosować:** Przy „X nie działa" w łańcuchu zdarzeń — najpierw zweryfikuj dane wejściowe na każdym etapie
+(jest subskrypcja? jest rekord-trigger? ma właściwe flagi?), potem dopiero podejrzewaj mechanizm.

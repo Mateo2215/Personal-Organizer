@@ -1,20 +1,24 @@
-# Ikony PWA — do dostarczenia z Claude Design
+# Ikony PWA — generowane skryptem
 
-Pliki ikon tworzymy w **Claude Design** (osobny program) i wrzucamy do tego katalogu (`web/public/`).
-Manifest (`vite.config.ts`) oraz `index.html` już je referują pod poniższymi nazwami — wystarczy podmienić pliki,
-nic w kodzie nie trzeba zmieniać.
+Ikony powstają z logo „Postęp" (gradient Aurora + pierścień postępu z odhaczeniem) przez deterministyczny skrypt
+`web/scripts/generate-icons.mjs` (rasteryzacja `sharp`). Geometria znaku jest wklejona w skrypt — nie zależy od
+folderu `design/`. Manifest (`vite.config.ts`) i `index.html` referują pliki pod stałymi nazwami.
 
-## Wymagane pliki
+## Regeneracja
+```
+cd web && node scripts/generate-icons.mjs
+```
 
-| Plik | Rozmiar | Przeznaczenie |
-|---|---|---|
-| `icon-192.png` | 192×192 | Minimum instalowalności PWA |
-| `icon-512.png` | 512×512 | Splash / wysoka rozdzielczość |
-| `icon-512-maskable.png` | 512×512 | Ikona „maskable" na ekranie głównym Androida |
-| `apple-touch-icon.png` | 180×180 | Skrót na iOS (iOS nie jest celem, ale tani bonus) |
+## Pliki (w tym katalogu)
+| Plik | Rozmiar | Przeznaczenie | purpose |
+|---|---|---|---|
+| `icon-192.png` | 192×192 | Minimum instalowalności PWA | any (squircle) |
+| `icon-512.png` | 512×512 | Splash / wysoka rozdzielczość | any (squircle) |
+| `icon-512-maskable.png` | 512×512 | Ekran główny Androida (system przycina) | maskable (pełny gradient) |
+| `apple-touch-icon.png` | 180×180 | Skrót na iOS (bonus, iOS nie jest celem) | — |
+| `favicon.svg` | wektor | Favicon (skaluje się 16–48 px) | — |
 
-## Wytyczne wizualne (spójne z designem apki)
-- Tło: ciemne (`#0a0a0a`), zgodne z `theme_color` / `background_color` manifestu.
-- Jeden kolor akcentu (do ustalenia w pass-ie designem A4).
-- **Maskable:** trzymaj symbol w centralnym „bezpiecznym polu" (~80% szerokości), bo Android przycina rogi.
-- Prosty, czytelny symbol w małym rozmiarze (organizer / zadania).
+## Uwagi wizualne
+- Wersje `any` to zaokrąglony kafelek (rogi przezroczyste) — jak ikona w samej apce.
+- Maskable/apple to pełny kwadrat gradientu (system sam zaokrągla); znak w centralnych ~75% = w bezpiecznym polu.
+- Kolory zgodne z tłem „Aurora": `theme_color`/`background_color` = `#0b0a12`.

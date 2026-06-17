@@ -17,6 +17,9 @@ dist/
 # Scratch
 .tmp/
 
+# Design reference (handoffy/prototypy — nie commitujemy)
+design/
+
 # Logs
 *.log
 npm-debug.log*

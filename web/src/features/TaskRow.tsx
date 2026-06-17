@@ -1,7 +1,8 @@
-// Pojedynczy wiersz zadania (checkbox + treść + termin + edycja + usuń). Zaległe wyróżnione na czerwono.
+// Pojedynczy wiersz zadania (checkbox + treść + termin + edycja + usuń). Zaległe wyróżnione na różowo.
 // Tap w ołówek przełącza wiersz w tryb edycji (treść + termin). Błąd zapisu nie gubi wpisanej treści.
 
 import { useState, type FormEvent } from "react";
+import { Check, Bell, Pencil, X } from "lucide-react";
 import {
   formatLocal,
   localInputToUtcIso,
@@ -28,6 +29,9 @@ export function TaskRow({
   const [due, setDue] = useState(utcIsoToLocalInput(task.has_time ? task.due_at : null));
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(false);
+
+  const done = task.status === "done";
+  const hasTime = !!task.has_time;
 
   function startEdit() {
     // Świeży snapshot zadania przy każdym wejściu w edycję (gdyby zmieniło się w tle).
@@ -56,39 +60,39 @@ export function TaskRow({
 
   if (editing) {
     return (
-      <li className="rounded-lg border border-indigo-700 bg-neutral-900 p-3">
+      <li className="rounded-[16px] border border-accent/40 bg-card p-[13px]">
         <form onSubmit={submit} className="space-y-2">
           <input
             value={content}
             onChange={(e) => setContent(e.target.value)}
             placeholder="Co masz zrobić?"
             autoFocus
-            className="w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 outline-none focus:border-indigo-500"
+            className="w-full rounded-[12px] border border-card-border bg-field px-3 py-2 text-ink placeholder:text-placeholder outline-none focus:border-accent/60"
           />
           <input
             type="datetime-local"
             value={due}
             onChange={(e) => setDue(e.target.value)}
-            className="w-full rounded-lg border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm outline-none focus:border-indigo-500"
+            className="w-full rounded-[12px] border border-card-border bg-field px-3 py-2 text-sm text-muted outline-none focus:border-accent/60"
           />
           <div className="flex gap-2">
             <button
               type="submit"
               disabled={saving || !content.trim()}
-              className="flex-1 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-medium text-white disabled:opacity-50"
+              className="accent-gradient flex-1 rounded-[12px] px-3 py-2 text-sm font-bold text-white disabled:opacity-50"
             >
               {saving ? "Zapisuję…" : "Zapisz"}
             </button>
             <button
               type="button"
               onClick={() => setEditing(false)}
-              className="rounded-lg border border-neutral-800 px-3 py-2 text-sm text-neutral-400 hover:text-neutral-200"
+              className="rounded-[12px] border border-card-border px-3 py-2 text-sm text-muted transition-colors hover:text-ink"
             >
               Anuluj
             </button>
           </div>
           {error && (
-            <p className="text-xs text-red-400">Nie udało się zapisać — treść zachowana, spróbuj ponownie.</p>
+            <p className="text-xs text-alarm-text">Nie udało się zapisać — treść zachowana, spróbuj ponownie.</p>
           )}
         </form>
       </li>
@@ -97,37 +101,56 @@ export function TaskRow({
 
   return (
     <li
-      className={`flex items-center gap-3 rounded-lg border px-3 py-2 ${
-        overdue ? "border-red-900 bg-red-950/30" : "border-neutral-800 bg-neutral-900"
-      }`}
+      className={`flex items-center gap-3 rounded-[15px] border px-[14px] py-[13px] transition-colors ${
+        overdue && !done
+          ? "border-alarm-border bg-alarm-bg"
+          : "border-card-border bg-card hover:border-card-hover"
+      } ${done ? "opacity-60" : ""}`}
     >
-      <input
-        type="checkbox"
-        checked={task.status === "done"}
-        onChange={onToggle}
-        className="h-5 w-5 accent-indigo-500"
-      />
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-label={done ? "Oznacz jako niezrobione" : "Oznacz jako zrobione"}
+        className={`flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded-full border-2 transition ${
+          done ? "accent-gradient border-transparent" : overdue ? "border-alarm" : "border-faint"
+        }`}
+      >
+        {done && <Check size={13} strokeWidth={3.5} className="text-white" />}
+      </button>
+
       <div className="min-w-0 flex-1">
-        <p className={task.status === "done" ? "truncate text-neutral-500 line-through" : "truncate"}>
+        <p
+          className={`truncate text-[14.5px] ${
+            done ? "text-[#8a8699] line-through" : "text-ink"
+          }`}
+        >
           {task.content}
         </p>
-        <p className={`text-xs ${overdue ? "text-red-400" : "text-neutral-500"}`}>
-          {formatLocal(task.has_time ? task.due_at : null)}
+        <p
+          className={`mt-0.5 flex items-center gap-1 text-[11.5px] font-semibold ${
+            overdue && !done ? "text-alarm-text" : hasTime ? "text-accent" : "text-faint"
+          }`}
+        >
+          {hasTime && <Bell size={12} strokeWidth={2} />}
+          {formatLocal(hasTime ? task.due_at : null)}
         </p>
       </div>
+
       <button
+        type="button"
         onClick={startEdit}
-        className="text-sm text-neutral-500 hover:text-indigo-400"
+        className="shrink-0 text-faint transition-colors hover:text-accent"
         aria-label="Edytuj"
       >
-        ✎
+        <Pencil size={15} strokeWidth={2} />
       </button>
       <button
+        type="button"
         onClick={onDelete}
-        className="text-sm text-neutral-500 hover:text-red-400"
+        className="shrink-0 text-faint transition-colors hover:text-alarm"
         aria-label="Usuń"
       >
-        ✕
+        <X size={15} strokeWidth={2} />
       </button>
     </li>
   );

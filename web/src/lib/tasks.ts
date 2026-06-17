@@ -69,6 +69,16 @@ export function isOverdue(t: Task): boolean {
   return t.status === "open" && !!t.due_at && new Date(t.due_at).getTime() < Date.now();
 }
 
+// Nadchodzące: termin w przyszłych dniach (od jutra w górę; czas lokalny urządzenia).
+export function isUpcoming(t: Task): boolean {
+  if (!t.due_at) return false;
+  const due = new Date(t.due_at);
+  const startTomorrow = new Date();
+  startTomorrow.setHours(0, 0, 0, 0);
+  startTomorrow.setDate(startTomorrow.getDate() + 1);
+  return due >= startTomorrow;
+}
+
 // Dzisiejsze: termin wypada w dzisiejszym dniu (czas lokalny urządzenia).
 export function isToday(t: Task): boolean {
   if (!t.due_at) return false;

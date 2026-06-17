@@ -1,8 +1,10 @@
 // Zakładka „Pomysły": szybki przechwyt + lista pogrupowana po projektach ze stałą Skrzynką.
 
+import { Lightbulb } from "lucide-react";
 import type { Idea } from "../lib/ideas";
 import { IdeaCapture } from "./IdeaCapture";
 import { ProjectGroup } from "./ProjectGroup";
+import { EmptyState } from "../components/EmptyState";
 import { useProjects, useIdeas } from "./useIdeasData";
 
 export function Ideas() {
@@ -17,18 +19,31 @@ export function Ideas() {
     byProject.set(idea.project_id, arr);
   }
 
+  const loading = loadingProjects || loadingIdeas;
+  const isEmpty = !loading && (ideas?.length ?? 0) === 0 && (projects?.length ?? 0) === 0;
+
   return (
     <div className="space-y-5">
       <IdeaCapture />
 
-      {(loadingProjects || loadingIdeas) && <p className="text-sm text-neutral-500">Wczytuję…</p>}
-      {isError && <p className="text-sm text-red-400">Błąd wczytywania pomysłów.</p>}
+      {loading && <p className="text-sm text-faint">Wczytuję…</p>}
+      {isError && <p className="text-sm text-alarm-text">Błąd wczytywania pomysłów.</p>}
 
-      {/* Stała Skrzynka na nieprzypisane, potem projekty (alfabetycznie z API). */}
-      <ProjectGroup project={null} ideas={byProject.get(null) ?? []} />
-      {projects?.map((p) => (
-        <ProjectGroup key={p.id} project={p} ideas={byProject.get(p.id) ?? []} />
-      ))}
+      {isEmpty ? (
+        <EmptyState
+          icon={Lightbulb}
+          title="Brak pomysłów"
+          description="Złap pierwszy pomysł w polu powyżej — trafi do Skrzynki albo do wybranego projektu."
+        />
+      ) : (
+        <>
+          {/* Stała Skrzynka na nieprzypisane, potem projekty (alfabetycznie z API). */}
+          <ProjectGroup project={null} ideas={byProject.get(null) ?? []} />
+          {projects?.map((p) => (
+            <ProjectGroup key={p.id} project={p} ideas={byProject.get(p.id) ?? []} />
+          ))}
+        </>
+      )}
     </div>
   );
 }
