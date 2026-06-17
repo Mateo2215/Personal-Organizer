@@ -17,7 +17,7 @@ run_worker_first = ["/api/*"]
 [[d1_databases]]
 binding = "DB"
 database_name = "personal-organizer"
-database_id = "00000000-0000-0000-0000-000000000000" # placeholder — uzupełnić po `wrangler d1 create`
+database_id = "63e993fb-1cca-4264-99bb-5b4d4c3af98b"
 
 # Budzik: Cron co minutę sprawdza zadania do przypomnienia i wysyła push.
 [triggers]
