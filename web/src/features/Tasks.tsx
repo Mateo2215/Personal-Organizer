@@ -2,7 +2,7 @@
 
 import { useState, type FormEvent } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Plus, Calendar, ListChecks } from "lucide-react";
+import { Calendar, ListChecks } from "lucide-react";
 import { addTask, localInputToUtcIso, isOverdue, isToday, isUpcoming } from "../lib/tasks";
 import { useTasks, useTaskActions } from "./useTaskActions";
 import { TaskRow } from "./TaskRow";
@@ -57,7 +57,7 @@ export function TasksPage() {
       {/* Composer */}
       <form onSubmit={submit} className="space-y-3 rounded-[18px] border border-card-border bg-card p-[13px]">
         <div className="flex items-center gap-2.5">
-          <Plus size={18} strokeWidth={2.5} className="shrink-0 text-accent" />
+          <ListChecks size={18} strokeWidth={2.5} className="shrink-0 text-accent" />
           <input
             value={content}
             onChange={(e) => setContent(e.target.value)}

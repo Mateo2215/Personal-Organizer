@@ -41,14 +41,17 @@ export function IdeaCapture() {
   }
 
   return (
-    <section className="space-y-3 rounded-[18px] border border-card-border bg-card p-[13px]">
+    <section className="space-y-3 rounded-[18px] border border-accent/30 bg-card p-[13px] shadow-[0_8px_30px_-16px_rgb(150_108_255_/_0.55)]">
+      <div className="flex items-center gap-2">
+        <Lightbulb size={15} strokeWidth={2.5} className="text-accent" />
+        <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-accent">Nowy pomysł</span>
+      </div>
       <form onSubmit={submit} className="space-y-3">
-        <div className="flex items-center gap-2.5">
-          <Lightbulb size={18} strokeWidth={2} className="shrink-0 text-accent" />
+        <div className="flex items-center gap-2.5 rounded-[14px] border border-card-border bg-field px-3.5 py-2.5">
           <input
             value={content}
             onChange={(e) => setContent(e.target.value)}
-            placeholder="Złap pomysł…"
+            placeholder="Co chodzi Ci po głowie?"
             className="w-full bg-transparent text-ink placeholder:text-placeholder outline-none"
           />
         </div>
@@ -84,28 +87,30 @@ export function IdeaCapture() {
       </form>
 
       {showNew ? (
-        <form onSubmit={addNewProject} className="flex gap-2">
+        <form onSubmit={addNewProject} className="space-y-2">
           <input
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             placeholder="Nazwa nowego projektu"
             autoFocus
-            className="flex-1 rounded-[12px] border border-card-border bg-field px-3 py-2 text-sm text-ink placeholder:text-placeholder outline-none focus:border-accent/60"
+            className="w-full rounded-[12px] border border-card-border bg-field px-3 py-2 text-sm text-ink placeholder:text-placeholder outline-none focus:border-accent/60"
           />
-          <button
-            type="submit"
-            disabled={createProject.isPending || !newName.trim()}
-            className="rounded-[12px] border border-card-border bg-white/[0.05] px-3 py-2 text-sm text-ink disabled:opacity-50"
-          >
-            Dodaj
-          </button>
-          <button
-            type="button"
-            onClick={() => { setShowNew(false); setNewName(""); }}
-            className="rounded-[12px] px-3 py-2 text-sm text-muted transition-colors hover:text-ink"
-          >
-            Anuluj
-          </button>
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => { setShowNew(false); setNewName(""); }}
+              className="rounded-[12px] px-3 py-2 text-sm text-muted transition-colors hover:text-ink"
+            >
+              Anuluj
+            </button>
+            <button
+              type="submit"
+              disabled={createProject.isPending || !newName.trim()}
+              className="rounded-[12px] border border-card-border bg-white/[0.05] px-4 py-2 text-sm text-ink disabled:opacity-50"
+            >
+              Dodaj
+            </button>
+          </div>
         </form>
       ) : (
         <button

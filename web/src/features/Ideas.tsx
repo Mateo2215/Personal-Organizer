@@ -37,8 +37,11 @@ export function Ideas() {
         />
       ) : (
         <>
-          {/* Stała Skrzynka na nieprzypisane, potem projekty (alfabetycznie z API). */}
-          <ProjectGroup project={null} ideas={byProject.get(null) ?? []} />
+          {/* Skrzynka na nieprzypisane — pokazujemy tylko gdy coś w niej jest
+              (to systemowy kosz, nie projekt; pusty nie wisi bez sensu). */}
+          {(byProject.get(null)?.length ?? 0) > 0 && (
+            <ProjectGroup project={null} ideas={byProject.get(null) ?? []} />
+          )}
           {projects?.map((p) => (
             <ProjectGroup key={p.id} project={p} ideas={byProject.get(p.id) ?? []} />
           ))}
