@@ -68,13 +68,16 @@ względne `/api/*` działają bez zmian, jeden deploy. (decyzja 2026-06-16, patr
       deploy najpierw na obecnym UI, design pass po kilku dniach realnego użycia (zobaczyć co uwiera). Ikony z Claude Design wgrać przy okazji.
 - [x] A5 P1: Checklista komend Bloku B — `personal-organizer/DEPLOY.md`.
 
-**Blok B — AKCJA USERA (konto Cloudflare, bez karty):**
-- [ ] B1: `wrangler login` (założyć/zalogować konto bez karty).
-- [ ] B2: `wrangler d1 create personal-organizer` → wkleić `database_id` do `wrangler.toml`.
-- [ ] B3: Sekrety `wrangler secret put`: **`APP_TOKEN`** (długi losowy, NIE placeholder) + `VAPID_PUBLIC_KEY`,
-      `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT` (wartości z `worker/.dev.vars`).
-- [ ] B4: `npm run migrate:remote`.
-- [ ] B5: `npm run deploy` (build front + deploy Worker z assetami).
+**Blok B — deploy przez GitHub + panel Cloudflare (ZMIANA 2026-06-17: bez terminala/wranglera lokalnie).**
+Powód: antywirus (Avast+Norton, skanowanie HTTPS) psuje lokalny npm/wrangler; build w chmurze CF omija problem.
+Build w CI: skrypt `worker` `ci:build` (instaluje front+worker, buduje front), deploy `npx wrangler deploy`. Szczegóły: `DEPLOY.md`.
+- [x] B1: Kod na GitHubie (`main`, `Mateo2215/Personal-Organizer`) — prep CI wypchnięty.
+- [ ] B2 (USER, panel): D1 SQL Database → Create `personal-organizer` → skopiować Database ID.
+- [ ] B3: Wpisać Database ID do `wrangler.toml` (placeholder) → commit + push.
+- [ ] B4 (USER, panel): D1 → Console → wkleić `worker/migrations/0001_init.sql` → Execute (schemat).
+- [ ] B5 (USER, panel): Workers & Pages → Import a repository → repo Personal-Organizer; root `worker`,
+      build `npm run ci:build`, deploy `npx wrangler deploy`, branch `main` → Save and Deploy.
+- [ ] B6 (USER, panel): Worker → Settings → Variables and Secrets → APP_TOKEN (losowy) + 3× VAPID z `.dev.vars`.
 
 **Blok C — weryfikacja na Androidzie (wspólnie):**
 - [ ] C1 P1: Otworzyć adres na telefonie → wpisać APP_TOKEN → zainstalować PWA na ekran główny.
