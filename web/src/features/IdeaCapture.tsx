@@ -1,17 +1,20 @@
-// Formularz szybkiego przechwytu pomysłu: treść + wybór projektu (lub Skrzynka / nowy w locie).
+// Formularz szybkiego przechwytu pomysłu: treść + priorytet + wybór projektu (lub Ogólne / nowy w locie).
 
 import { useState, type FormEvent } from "react";
 import { Lightbulb, ChevronDown } from "lucide-react";
+import { DEFAULT_PRIORITY, type IdeaPriority } from "../lib/ideas";
+import { PriorityPicker } from "./PriorityPicker";
 import { useProjects, useIdeasActions } from "./useIdeasData";
 
-const INBOX = ""; // pusta wartość selecta = Skrzynka (project_id null)
+const INBOX = ""; // pusta wartość selecta = Ogólne (project_id null)
 
 export function IdeaCapture() {
   const { data: projects } = useProjects();
   const { createIdea, createProject } = useIdeasActions();
 
   const [content, setContent] = useState("");
-  const [project, setProject] = useState<string>(INBOX); // id projektu jako string lub "" (Skrzynka)
+  const [project, setProject] = useState<string>(INBOX); // id projektu jako string lub "" (Ogólne)
+  const [priority, setPriority] = useState<IdeaPriority>(DEFAULT_PRIORITY);
   const [newName, setNewName] = useState("");
   const [showNew, setShowNew] = useState(false);
 
@@ -21,9 +24,9 @@ export function IdeaCapture() {
     if (!text) return;
     const projectId = project === INBOX ? null : Number(project);
     createIdea.mutate(
-      { content: text, project_id: projectId },
-      // Czyścimy treść dopiero po udanym zapisie (brak utraty przy błędzie). Projekt zostaje.
-      { onSuccess: () => setContent("") },
+      { content: text, project_id: projectId, priority },
+      // Czyścimy treść i priorytet dopiero po udanym zapisie (brak utraty przy błędzie). Projekt zostaje.
+      { onSuccess: () => { setContent(""); setPriority(DEFAULT_PRIORITY); } },
     );
   }
 
@@ -55,6 +58,7 @@ export function IdeaCapture() {
             className="w-full bg-transparent text-ink placeholder:text-placeholder outline-none"
           />
         </div>
+        <PriorityPicker value={priority} onChange={setPriority} />
         <div className="flex items-center justify-between gap-2">
           <div className="relative flex-1">
             <select
@@ -62,7 +66,7 @@ export function IdeaCapture() {
               onChange={(e) => setProject(e.target.value)}
               className="w-full appearance-none rounded-[14px] border border-card-border bg-field py-2 pl-3.5 pr-9 text-sm text-ink outline-none focus:border-accent/60"
             >
-              <option value={INBOX}>Skrzynka</option>
+              <option value={INBOX}>Ogólne</option>
               {projects?.map((p) => (
                 <option key={p.id} value={String(p.id)}>{p.name}</option>
               ))}

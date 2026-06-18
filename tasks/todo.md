@@ -6,8 +6,10 @@ zdeployowana przez **Workers Builds podpięte do GitHuba** (build w chmurze CF, 
 **Push POTWIERDZONY na realnym Androidzie przy ZAMKNIĘTEJ apce** (user, 2026-06-17): powiadomienie przyszło
 punktualnie (~1 min po terminie, czyli cykl crona). PWA zainstalowana na ekranie głównym. Strefa czasowa zweryfikowana
 (lokalny→UTC poprawne). Rdzeń v1 (Fazy 0–3) + dowóz (Faza 4) = kompletne i używalne.
-**Redesign „Aurora" + 6 poprawek z dogfoodingu — zweryfikowane na telefonie przez usera (2026-06-17).** Apka jest w realnym
-codziennym użyciu. Następny krok to NIE kosmetyka, lecz brakujące funkcje pod codzienne użycie (zadania codzienne, kalendarz) — przez brainstorming.
+**Redesign „Aurora" + 6 poprawek z dogfoodingu — zweryfikowane na telefonie przez usera (2026-06-17).**
+**Rutyny (zadania codzienne) POTWIERDZONE NA ŻYWO przez usera (2026-06-18)** → rdzeń v1 zamknięty w całości,
+luka „używane codziennie" domknięta. Apka jest w realnym codziennym użyciu. Dalszy rozwój = nowe funkcje
+self-extend wg mapy drogowej niżej („Mapa drogowa — po v1"), nie kosmetyka.
 Stack: Cloudflare Workers (Hono) + D1 + Cron + Web Push + Workers Static Assets; front React+Vite+TS, Tailwind, TanStack Query.
 Auth = token aplikacyjny (NIE Cloudflare Access). Repo: GitHub `Mateo2215/Personal-Organizer`, gałąź `main` (push→auto-redeploy).
 UWAGA środowisko (dot. tylko LOKALNEGO dev): npm/wrangler wymaga `NODE_OPTIONS=--use-system-ca` (Avast+Norton przechwytują HTTPS).
@@ -16,7 +18,7 @@ Deploy NIE używa już lokalnego toolchainu. Pełne decyzje: `../../ai-os/projec
 ## Model danych (D1)
 - `projects` (id, name, created_at)
 - `tasks` (id, content, due_at UTC nullable, has_time, status open|done, reminded_at, created_at, updated_at) — bez projektu w v1
-- `ideas` (id, content, project_id nullable→Skrzynka, created_at)
+- `ideas` (id, content, project_id nullable→Ogólne, priority 1|2|3 default 1, created_at)
 - `push_subscriptions` (id, endpoint UNIQUE, p256dh, auth, created_at)
 
 ## Plan v1 — fazy
@@ -142,18 +144,59 @@ Cron/push NIE ruszane (świadoma izolacja). Build (tsc+vite+PWA) + ESLint + type
 - [x] P1: `RoutineRow.tsx` (checkbox + ↻; tryb zarządzania = rename inline + usuń) + render na „Dziś" (góra, pierścień liczy rutyny+zadania, EmptyState gdy brak rutyn ORAZ zaległych ORAZ dzisiejszych).
 - [x] P2: Sekcja „Codzienne" w `Tasks.tsx` (composer + lista z rename/delete).
 - [x] P2: `routines` w `lib/export.ts` (ExportData).
-- [ ] P1 (USER, panel): wklej `0002_routines.sql` w **D1 Console** na produkcji (jak `0001`), potem push na `main` → auto-redeploy.
-- [ ] P1 (live): smoke API z tokenem (`POST/GET/PATCH last_done_on/DELETE /api/routines`, `/api/export` ma `routines`) + przejście UI na telefonie (dodaj rutynę → góra „Dziś" → odhacz → pierścień rośnie → następnego dnia wraca).
+- [x] P1 (USER, panel): tabela `routines` założona w **D1 Console** (gołe DDL bez komentarzy — patrz lessons.md). Potwierdzone usera.
+- [x] P1: kod wypchnięty na `main` (2 commity: zaległa lekcja + funkcja rutyn, `fd9a54a..7f4b467`) → Workers Builds auto-redeploy wyzwolony.
+- [x] P1 (live): deploy na zielono + przejście UI na telefonie POTWIERDZONE przez usera (2026-06-18): rutyny działają.
+      Luka „używane codziennie" domknięta w całości — rdzeń v1 zamknięty.
 
-## Zgłoszone braki → na kolejną sesję
-- [ ] P2: **Widok kalendarza** — podgląd zaplanowanych rzeczy na kolejne dni (osobna sesja, prawdopodobnie po brainstormie).
+## Mapa drogowa — po v1 (finalne priorytety, ustalone 2026-06-18)
+Rdzeń v1 zamknięty (rutyny potwierdzone na żywo). Poniżej kolejne funkcje self-extend, uporządkowane wspólnie
+z userem. Filtr nadrzędny bez zmian: codzienny użytek > liczba funkcji, $0, izolacja crona/push, v1 chude.
 
-## Świadomie później (v2+)
-- [ ] P3: „Przypomnij X minut wcześniej"
-- [ ] P3: Pełne offline z auto-dosyłaniem (v1: online-only, bez utraty treści przy błędzie)
-- [ ] P3: Import danych z pliku
-- [ ] P3: Projekty/tagi jako moduł dla zadań; zadania cykliczne; pomysł→zadanie; kalendarz
-- [ ] P3: Cloudflare Access (login Google) jako osobna strona; wariant „AI w narzędziu"
+### P1 — Następne do zrobienia
+- [~] **P1 #1 — Pomysły 2.0: priorytety + „Ogólne"** — ZAIMPLEMENTOWANE LOKALNIE (2026-06-18), do dowozu.
+      Build (tsc+vite+PWA) + ESLint + typecheck workera = czyste. Decyzje startowe (do oceny na telefonie):
+      3 poziomy Niski(1)/Średni(2)/Wysoki(3), **domyślny = Niski** (świadomie — by nowy pomysł nie świecił od razu),
+      paleta szary/żółty/czerwony (token `--color-prio-med` + reużyty `alarm`), znacznik = **obwódka/poświata karty**
+      + dyskretna kropka w stopce wiersza.
+  - [x] Migracja `worker/migrations/0003_idea_priority.sql` (`ALTER TABLE ideas ADD COLUMN priority INTEGER NOT NULL DEFAULT 1`).
+  - [x] Backend: POST/PATCH `/api/ideas` przyjmują `priority` (clamp 1–3); GET/eksport płyną przez `SELECT *` (bez zmian).
+  - [x] Model: `lib/ideas.ts` — typ `IdeaPriority`, `DEFAULT_PRIORITY`, `PRIORITIES` (etykiety+klasy), `priorityMeta`.
+  - [x] Front: `PriorityPicker.tsx` (3 segmenty z kropką, wspólny), picker w `IdeaCapture` i `IdeaItem` (edycja).
+  - [x] Podgląd wiersza: obwódka/poświata wg wagi (`IdeaItem`) + kropka+etykieta w stopce.
+  - [x] Sortowanie wg wagi **wewnątrz** grup (`Ideas.tsx`, stabilny sort — kolejność „najnowsze pierwsze" zachowana).
+  - [x] Rename „Skrzynka" → „Ogólne": `ProjectGroup` (nagłówek + komunikat usuwania), `Ideas` (EmptyState), opcje selectów, komentarze.
+  - [ ] **P1 #1a (USER, panel): migracja `0003` w D1 Console** — gołe DDL w jednej linii (bez komentarza `--`, patrz lessons):
+        `ALTER TABLE ideas ADD COLUMN priority INTEGER NOT NULL DEFAULT 1;`
+  - [ ] **P1 #1b: push na `main`** → Workers Builds auto-redeploy. (Kolejność: najpierw migracja w D1, potem push — by świeży kod nie trafił na bazę bez kolumny.)
+  - [ ] **P1 #1c (live): weryfikacja na telefonie** — czytelność palety/obwódki na małym ekranie, domyślny poziom, sortowanie.
+- [ ] **P1 #2 — Ekran „Ustawienia" + personalizacja** (3. pomysł usera).
+      - Nowa podstrona (route) „Ustawienia"; przeniesione tam **Eksport** i **Wyloguj** z menu ⋮ w nagłówku.
+      - **Imię** trzymane w `localStorage` (decyzja: per urządzenie, zero backendu/$0) → powitanie
+        „Dzień dobry, <imię> 👋" w „Dziś" (`Today.tsx:79-81`).
+      - Zostawić miejsce na „inne rzeczy" (przyszłe przełączniki).
+      - Dotyka: nowy route + ikona wejścia w `Layout.tsx` (zamiast/obok ⋮), `lib/settings.ts` (localStorage), `Today.tsx`.
+
+### P2 — Następna duża funkcja
+- [ ] **P2 #3 — Widok kalendarza** (zgłoszony brak nr 2): podgląd zaplanowanego na kolejne dni.
+      **Wymaga krótkiego brainstormu** (tydzień vs miesiąc, agenda-lista vs siatka, czy pokazywać rutyny) — jak przy rutynach.
+
+### P2/P3 — Usprawnienia przepływu
+- [ ] P2/P3 #4 — **Pomysł → zadanie jednym klikiem** (domyka „łapię pomysł, później robię zadanie";
+      synergia z priorytetami — ważny pomysł → zadanie z terminem).
+- [ ] P2/P3 #5 — **Import danych** (komplement do eksportu; wejście naturalnie z ekranu „Ustawienia").
+
+### P3 — Drobne, gdy zaboli w użyciu
+- [ ] P3 #6 — „Przypomnij X minut wcześniej".
+- [ ] P3 #7 — Sekcja „Bez terminu" w „Dziś" (drzwi otwarte decyzją z 16.06).
+- [ ] P3 #8 — Ręczne sortowanie rutyn (otwarte pytanie — może w ogóle nie uwiera).
+
+### v2+ — Świadomie zaparkowane (zmiany modelu / strategiczne)
+- [ ] v2 #9 — Pełne zadania cykliczne (co tydzień, konkretne dni — poza prostymi rutynami codziennymi).
+- [ ] v2 #10 — Projekty/tagi jako moduł także dla zadań.
+- [ ] v2 #11 — Pełne offline z auto-dosyłaniem (v1: online-only, bez utraty treści przy błędzie).
+- [ ] v2 #12 — Cloudflare Access (login Google) jako osobna strona.
+- [ ] v2 #13 — Wariant „AI w narzędziu" (łamie $0 — wymaga osobnej decyzji).
 
 ## Notatki
 - Najpierw Faza 1 (push end-to-end). Ryzyko nr 1: wysyłka Web Push z Workera — udowodnić w spike'u, zanim zbudujemy resztę.

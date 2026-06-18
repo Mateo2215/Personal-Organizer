@@ -2,7 +2,7 @@
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { listProjects, addProject, renameProject, deleteProject } from "../lib/projects";
-import { listIdeas, addIdea, patchIdea, deleteIdea } from "../lib/ideas";
+import { listIdeas, addIdea, patchIdea, deleteIdea, type IdeaPriority } from "../lib/ideas";
 
 export function useProjects() {
   return useQuery({ queryKey: ["projects"], queryFn: listProjects });
@@ -18,12 +18,13 @@ export function useIdeasActions() {
   const invProjects = () => qc.invalidateQueries({ queryKey: ["projects"] });
 
   const createIdea = useMutation({
-    mutationFn: (v: { content: string; project_id: number | null }) => addIdea(v.content, v.project_id),
+    mutationFn: (v: { content: string; project_id: number | null; priority: IdeaPriority }) =>
+      addIdea(v.content, v.project_id, v.priority),
     onSuccess: invIdeas,
   });
   const editIdea = useMutation({
-    mutationFn: (v: { id: number; content: string; project_id: number | null }) =>
-      patchIdea(v.id, { content: v.content, project_id: v.project_id }),
+    mutationFn: (v: { id: number; content: string; project_id: number | null; priority: IdeaPriority }) =>
+      patchIdea(v.id, { content: v.content, project_id: v.project_id, priority: v.priority }),
     onSuccess: invIdeas,
   });
   const removeIdea = useMutation({
@@ -39,7 +40,7 @@ export function useIdeasActions() {
     onSuccess: invProjects,
   });
   const removeProject = useMutation({
-    // Usunięcie przenosi pomysły do Skrzynki — odświeżamy obie listy.
+    // Usunięcie przenosi pomysły do Ogólnych — odświeżamy obie listy.
     mutationFn: (id: number) => deleteProject(id),
     onSuccess: () => { invProjects(); invIdeas(); },
   });

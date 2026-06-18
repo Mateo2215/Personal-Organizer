@@ -1,5 +1,5 @@
 // Jedna grupa w widoku Pomysłów: nagłówek projektu (zmień nazwę / usuń) + lista pomysłów.
-// project === null oznacza stałą „Skrzynkę" (bez zarządzania).
+// project === null oznacza stałą grupę „Ogólne" (bez zarządzania).
 
 import { useState } from "react";
 import { Inbox, Pencil, X } from "lucide-react";
@@ -23,7 +23,7 @@ export function ProjectGroup({ project, ideas }: { project: Project | null; idea
 
   function onDelete() {
     if (!project) return;
-    const msg = `Usunąć projekt „${project.name}"? Jego pomysły trafią do Skrzynki (nie zostaną skasowane).`;
+    const msg = `Usunąć projekt „${project.name}"? Jego pomysły trafią do Ogólnych (nie zostaną skasowane).`;
     if (confirm(msg)) removeProject.mutate(project.id);
   }
 
@@ -46,7 +46,7 @@ export function ProjectGroup({ project, ideas }: { project: Project | null; idea
           <>
             {isInbox && <Inbox size={15} strokeWidth={2} className="text-muted" />}
             <h2 className={`text-sm font-bold ${isInbox ? "text-muted" : "text-ink"}`}>
-              {isInbox ? "Skrzynka" : project!.name}
+              {isInbox ? "Ogólne" : project!.name}
             </h2>
             <span className="rounded-full bg-[rgb(150_124_255_/_0.16)] px-2 py-0.5 text-[11px] font-bold text-accent-soft">
               {ideas.length}

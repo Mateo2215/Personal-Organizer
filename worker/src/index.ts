@@ -201,20 +201,24 @@ app.get("/api/ideas", async (c) => {
   return c.json(res.results ?? []);
 });
 
+// Priorytet pomysłu: 1 (niski) | 2 (średni) | 3 (wysoki). Cokolwiek poza tym → 1.
+const clampPriority = (v: unknown): number => (v === 2 || v === 3 ? v : 1);
+
 app.post("/api/ideas", async (c) => {
-  const body = await c.req.json<{ content?: string; project_id?: number | null }>();
+  const body = await c.req.json<{ content?: string; project_id?: number | null; priority?: number }>();
   const content = body.content?.trim();
   if (!content) return c.json({ error: "content required" }, 400);
   const projectId = body.project_id ?? null;
+  const priority = clampPriority(body.priority);
   const row = await c.env.DB.prepare(
-    "INSERT INTO ideas (content, project_id) VALUES (?, ?) RETURNING *",
-  ).bind(content, projectId).first();
+    "INSERT INTO ideas (content, project_id, priority) VALUES (?, ?, ?) RETURNING *",
+  ).bind(content, projectId, priority).first();
   return c.json(row, 201);
 });
 
 app.patch("/api/ideas/:id", async (c) => {
   const id = Number(c.req.param("id"));
-  const body = await c.req.json<{ content?: string; project_id?: number | null }>();
+  const body = await c.req.json<{ content?: string; project_id?: number | null; priority?: number }>();
 
   const sets: string[] = [];
   const binds: unknown[] = [];
@@ -224,6 +228,7 @@ app.patch("/api/ideas/:id", async (c) => {
     sets.push("content = ?"); binds.push(content);
   }
   if (body.project_id !== undefined) { sets.push("project_id = ?"); binds.push(body.project_id ?? null); }
+  if (body.priority !== undefined) { sets.push("priority = ?"); binds.push(clampPriority(body.priority)); }
   if (sets.length === 0) return c.json({ error: "nothing to update" }, 400);
 
   binds.push(id);

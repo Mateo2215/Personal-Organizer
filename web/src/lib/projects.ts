@@ -16,6 +16,6 @@ export const addProject = (name: string) =>
 export const renameProject = (id: number, name: string) =>
   api<Project>(`/api/projects/${id}`, { method: "PATCH", body: JSON.stringify({ name }) });
 
-// Usunięcie przenosi pomysły projektu do Skrzynki (logika po stronie Workera).
+// Usunięcie przenosi pomysły projektu do Ogólnych (logika po stronie Workera).
 export const deleteProject = (id: number) =>
   api<void>(`/api/projects/${id}`, { method: "DELETE" });

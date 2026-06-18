@@ -4,10 +4,11 @@
 import { useState, type FormEvent } from "react";
 import { Pencil, X, ChevronDown } from "lucide-react";
 import { formatLocal } from "../lib/tasks";
-import type { Idea } from "../lib/ideas";
+import { priorityMeta, type Idea, type IdeaPriority } from "../lib/ideas";
+import { PriorityPicker } from "./PriorityPicker";
 import { useProjects, useIdeasActions } from "./useIdeasData";
 
-const INBOX = ""; // pusta wartość selecta = Skrzynka (project_id null)
+const INBOX = ""; // pusta wartość selecta = Ogólne (project_id null)
 
 export function IdeaItem({ idea }: { idea: Idea }) {
   const { data: projects } = useProjects();
@@ -16,11 +17,15 @@ export function IdeaItem({ idea }: { idea: Idea }) {
   const [editing, setEditing] = useState(false);
   const [content, setContent] = useState(idea.content);
   const [project, setProject] = useState<string>(idea.project_id == null ? INBOX : String(idea.project_id));
+  const [priority, setPriority] = useState<IdeaPriority>(idea.priority);
   const [error, setError] = useState(false);
+
+  const meta = priorityMeta(idea.priority);
 
   function startEdit() {
     setContent(idea.content);
     setProject(idea.project_id == null ? INBOX : String(idea.project_id));
+    setPriority(idea.priority);
     setError(false);
     setEditing(true);
   }
@@ -31,7 +36,7 @@ export function IdeaItem({ idea }: { idea: Idea }) {
     if (!text) return;
     setError(false);
     editIdea.mutate(
-      { id: idea.id, content: text, project_id: project === INBOX ? null : Number(project) },
+      { id: idea.id, content: text, project_id: project === INBOX ? null : Number(project), priority },
       { onSuccess: () => setEditing(false), onError: () => setError(true) },
     );
   }
@@ -47,6 +52,7 @@ export function IdeaItem({ idea }: { idea: Idea }) {
             autoFocus
             className="w-full resize-y rounded-[12px] border border-card-border bg-field px-3 py-2 text-sm text-ink outline-none focus:border-accent/60"
           />
+          <PriorityPicker value={priority} onChange={setPriority} />
           <div className="flex gap-2">
             <div className="relative flex-1">
               <select
@@ -54,7 +60,7 @@ export function IdeaItem({ idea }: { idea: Idea }) {
                 onChange={(e) => setProject(e.target.value)}
                 className="w-full appearance-none rounded-[12px] border border-card-border bg-field py-2 pl-3 pr-9 text-sm text-ink outline-none focus:border-accent/60"
               >
-                <option value={INBOX}>Skrzynka</option>
+                <option value={INBOX}>Ogólne</option>
                 {projects?.map((p) => (
                   <option key={p.id} value={String(p.id)}>{p.name}</option>
                 ))}
@@ -89,10 +95,13 @@ export function IdeaItem({ idea }: { idea: Idea }) {
   }
 
   return (
-    <li className="flex items-start gap-3 rounded-[14px] border border-card-border bg-card px-[14px] py-[11px] transition-colors hover:border-card-hover">
+    <li className={`flex items-start gap-3 rounded-[14px] border bg-card px-[14px] py-[11px] transition-colors ${meta.cardClass}`}>
       <div className="min-w-0 flex-1">
         <p className="whitespace-pre-wrap break-words text-sm leading-[1.4] text-ink">{idea.content}</p>
-        <p className="mt-1 text-[10.5px] text-faint">{formatLocal(idea.created_at)}</p>
+        <p className="mt-1 flex items-center gap-1.5 text-[10.5px] text-faint">
+          <span className={`h-1.5 w-1.5 rounded-full ${meta.dotClass}`} aria-hidden />
+          {meta.label} · {formatLocal(idea.created_at)}
+        </p>
       </div>
       <button onClick={startEdit} aria-label="Edytuj pomysł" className="shrink-0 text-faint transition-colors hover:text-accent">
         <Pencil size={14} strokeWidth={2} />

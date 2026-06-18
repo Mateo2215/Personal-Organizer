@@ -59,3 +59,14 @@ skryptów w innym — bez dublowania instalacji i bez nowego wektora problemów 
 danych źródłowych do skryptu uniezależnia artefakt od plików spoza repo.
 **Jak stosować:** Jednorazowy skrypt potrzebuje paczki, która już gdzieś w repo jest? `createRequire` z `package.json`
 tamtego workspace zamiast `npm install`. Jeśli skrypt zależy od czegoś gitignored — zinline'uj to, by działał bez tego pliku.
+
+## 2026-06-17 — D1 Console spłaszcza wklejany SQL — komentarze `--` zjadają resztę polecenia
+**Co:** Wklejenie migracji `0002_routines.sql` (wieloliniowa z komentarzami `--`) w D1 Console padło z `incomplete input:
+SQLITE_ERROR`. Konsola spłaszcza wklejony tekst do jednej linii, a komentarz `--` obejmuje wszystko do końca linii —
+po spłaszczeniu domknięcie definicji (`created_at ... )`) wpadło „pod komentarz", więc SQLite widział niedokończone
+polecenie. Fix: wklejona ta sama definicja **bez komentarzy, w jednej linii** — wykonała się od razu.
+**Dlaczego ważne:** Schemat w tym projekcie zakładamy ręcznie przez D1 Console (nie `wrangler migrations apply`).
+Plik migracji w repo trzymamy z komentarzami (czytelność, `wrangler` je ogarnia), ale do ręcznego wklejania trzeba
+wersji „gołej". To stały tarcie tego flow przy każdej nowej tabeli.
+**Jak stosować:** Wklejasz DDL do D1 Console → usuń komentarze `--` i zbij w jedną linię (albo upewnij się, że żaden
+`--` nie poprzedza dalszej części polecenia). Komentarze zostaw w pliku migracji w repo, nie w tym, co lecisz do Console.
