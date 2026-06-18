@@ -5,6 +5,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { sendPush, sendToAll, type StoredSubscription } from "./push";
+import { processTaskReminders } from "./scheduler";
 
 export interface Env {
   DB: D1Database;
@@ -287,22 +288,23 @@ export default {
     ).all<StoredSubscription>();
     const subs = subsRes.results ?? [];
 
-    for (const task of tasks) {
-      for (const sub of subs) {
-        try {
-          const status = await sendPush(env, sub, {
-            title: "Przypomnienie",
-            body: task.content,
-            tag: `task-${task.id}`,
-          });
-          if (status === 404 || status === 410) {
-            await env.DB.prepare("DELETE FROM push_subscriptions WHERE id = ?").bind(sub.id).run();
-          }
-        } catch {
-          // pojedyncza nieudana wysyłka nie blokuje reszty
-        }
-      }
-      await env.DB.prepare("UPDATE tasks SET reminded_at = ? WHERE id = ?").bind(now, task.id).run();
-    }
+    await processTaskReminders(tasks, subs, {
+      sendPush: (sub, task) =>
+        sendPush(env, sub, {
+          title: "Przypomnienie",
+          body: task.content,
+          tag: `task-${task.id}`,
+        }),
+      setRemindedAt: (taskId) =>
+        env.DB.prepare("UPDATE tasks SET reminded_at = ? WHERE id = ?")
+          .bind(now, taskId)
+          .run()
+          .then(() => undefined),
+      deleteSub: (subId) =>
+        env.DB.prepare("DELETE FROM push_subscriptions WHERE id = ?")
+          .bind(subId)
+          .run()
+          .then(() => undefined),
+    });
   },
 };

@@ -16,6 +16,35 @@ export function notificationsGranted(): boolean {
   return "Notification" in window && Notification.permission === "granted";
 }
 
+// Checks the real browser push subscription and syncs it with the backend.
+// Called silently on app load — if the sub expired or was cleared, re-registers it.
+export async function syncPushSubscription(): Promise<{
+  active: boolean;
+  reason?: "no_subscription" | "sync_failed";
+}> {
+  if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+    return { active: false };
+  }
+  if (Notification.permission !== "granted") {
+    return { active: false };
+  }
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    const sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      return { active: false, reason: "no_subscription" };
+    }
+    const json = sub.toJSON();
+    await api("/api/subscribe", {
+      method: "POST",
+      body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys }),
+    });
+    return { active: true };
+  } catch {
+    return { active: false, reason: "sync_failed" };
+  }
+}
+
 export async function enablePush(): Promise<{ ok: boolean; reason?: string }> {
   if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
     return { ok: false, reason: "Ta przeglądarka nie wspiera powiadomień push." };

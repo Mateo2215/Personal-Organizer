@@ -70,3 +70,31 @@ Plik migracji w repo trzymamy z komentarzami (czytelność, `wrangler` je ogarni
 wersji „gołej". To stały tarcie tego flow przy każdej nowej tabeli.
 **Jak stosować:** Wklejasz DDL do D1 Console → usuń komentarze `--` i zbij w jedną linię (albo upewnij się, że żaden
 `--` nie poprzedza dalszej części polecenia). Komentarze zostaw w pliku migracji w repo, nie w tym, co lecisz do Console.
+
+## 2026-06-18 — Zmiana schematu: migracja w D1 PRZED pushem (push = natychmiastowy auto-redeploy na prod)
+**Co:** Deploy to Workers Builds podpięte do `main` — `git push` od razu buduje i wdraża nową wersję na produkcję,
+która jest w realnym codziennym użyciu. Gdy commit dodaje kolumnę (`ideas.priority`) i kod jej używa (INSERT/PATCH),
+a migracja `0003` nie jest jeszcze w D1, to świeży kod trafia na bazę bez kolumny → dodawanie/edycja pomysłów sypie
+błędem (odczyt przez `SELECT *` przeżyje, zapis nie). Kolejność jest krytyczna: **najpierw migracja w D1 Console,
+dopiero potem push.**
+**Dlaczego ważne:** Nie ma „okna" między pushem a deployem do ręcznego dołożenia migracji — redeploy jest
+automatyczny. Przy żywej apce to nie jest hipoteza, tylko realna chwilowa awaria funkcji. Dlatego przed pushem zmiany
+schematu pytam wprost: „czy migracja już jest w D1?" — i bramkuję push tą odpowiedzią.
+**Jak stosować:** Commit dotyka schematu? Sekwencja: (1) załóż migrację w D1 Console (gołe DDL, jedna linia — patrz
+lekcja wyżej), (2) potwierdź że weszła, (3) dopiero push. Zmiana front-only / bez nowej kolumny → push bezpieczny od ręki.
+
+## 2026-06-18 — Prosty `"` w polskim stringu JSX przedwcześnie zamyka literał
+**Co:** W stringu `"...na ekranie „Dziś". Zapisane..."` cudzysłów po `Dziś` był PROSTY (`"`, U+0022), nie krzywy (`"`),
+więc zamknął literał JS w środku zdania → `tsc` TS1005 „'}' expected". Reszta zdania stała się błędnym tokenem.
+**Dlaczego ważne:** UI jest po polsku, więc krzywe `„…"` są wszędzie; o pomyłkę (jeden prosty cudzysłów w stringu
+delimitowanym prostym `"`) bardzo łatwo, a komunikat tsc wskazuje mylące miejsce (koniec zdania, nie sam cudzysłów).
+**Jak stosować:** W stringach JS delimitowanych `"` nie wstawiaj prostych `"` w treści — użyj krzywych `„…"`, backticków
+albo usuń wewnętrzne cudzysłowy. Build (`tsc -b`) łapie to od razu — uruchamiaj po każdej partii zmian w UI.
+
+## 2026-06-18 — Udany happy path push nie potwierdza bezpiecznej obsługi awarii
+**Co:** Push został potwierdzony na realnym Androidzie, ale code review wykazał, że cron ustawia `reminded_at` również wtedy,
+gdy nie ma subskrypcji albo wszystkie wysyłki zawiodą. Live test potwierdził ścieżkę sukcesu, lecz nie semantykę retry.
+**Dlaczego ważne:** Przypomnienia są główną obietnicą produktu. Jednorazowy sukces produkcyjny nie zabezpiecza przypadków
+timeout, 429/500, martwej subskrypcji ani pustej listy odbiorców.
+**Jak stosować:** Dla krytycznych pipeline'ów testuj osobno: sukces, błąd przejściowy, błąd trwały i brak odbiorcy. Stan
+„obsłużone" zapisuj dopiero po jednoznacznym potwierdzeniu sukcesu, a nie po samym zakończeniu pętli.

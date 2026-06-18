@@ -15,6 +15,21 @@ Auth = token aplikacyjny (NIE Cloudflare Access). Repo: GitHub `Mateo2215/Person
 UWAGA środowisko (dot. tylko LOKALNEGO dev): npm/wrangler wymaga `NODE_OPTIONS=--use-system-ca` (Avast+Norton przechwytują HTTPS).
 Deploy NIE używa już lokalnego toolchainu. Pełne decyzje: `../../ai-os/projects/personal-organizer/decisions.md`.
 
+## PRIORITY — Stabilizacja po code review (2026-06-18)
+
+Pełny raport: `tasks/priority-code-review-2026-06-18.md`.
+
+- [x] **P1: Nie ustawiaj `reminded_at`, jeśli żaden push nie został przyjęty (2xx).** ✓ 2026-06-18
+- [x] **P1: Weryfikuj i naprawiaj realną subskrypcję push, nie tylko zgodę `Notification.permission`.** ✓ 2026-06-18
+- [x] P1: Dodaj testy regresyjne dla obu ścieżek push. ✓ 2026-06-18 (10+5 testów Vitest)
+- [ ] P2: Odrzucaj nieistniejący `project_id` przy zapisie pomysłu.
+- [ ] P2: Dodaj potwierdzenie lub Undo przed usunięciem zadania, pomysłu i rutyny.
+- [ ] P3: Dodaj bezpieczny fallback dla powrotu z `/settings`.
+- [ ] P3: Usuń ostrzeżenie CSS z komentarza w `web/src/index.css`.
+- [ ] P3: Po osobnym potwierdzeniu zaktualizuj nieaktualny opis auth w `CLAUDE.md`.
+
+**Bramka:** wdrożenie kalendarza zaczyna się po zamknięciu dwóch punktów P1 i ich testów.
+
 ## Model danych (D1)
 - `projects` (id, name, created_at)
 - `tasks` (id, content, due_at UTC nullable, has_time, status open|done, reminded_at, created_at, updated_at) — bez projektu w v1
@@ -178,12 +193,22 @@ z userem. Filtr nadrzędny bez zmian: codzienny użytek > liczba funkcji, $0, iz
   - [x] Router: trasa `/settings` w `App.tsx`.
   - [x] `Layout.tsx` — usunięte menu ⋮ + logika eksportu/wylogowania (przeniesione do Settings); ikona Ustawień/wstecz, tytuł „Ustawienia".
   - [x] `Today.tsx` — powitanie „Dzień dobry, <imię> 👋" gdy imię ustawione (odczyt `getName()` przy wejściu).
-  - [ ] **P1 #2a: push na `main`** → Workers Builds auto-redeploy (sam front + brak zmian D1 — bezpieczne).
-  - [ ] **P1 #2b (live): weryfikacja na telefonie** — wejście kołem zębatym, zapis imienia, powitanie na „Dziś", eksport, wylogowanie.
+  - [x] **P1 #2a: push na `main`** (commit `cd9e982`, `fd30cad..cd9e982`) → Workers Builds auto-redeploy wyzwolony.
+  - [x] **P1 #2b (live): weryfikacja na telefonie** — potwierdzona przez usera (2026-06-18): działa.
 
 ### P2 — Następna duża funkcja
 - [ ] **P2 #3 — Widok kalendarza** (zgłoszony brak nr 2): podgląd zaplanowanego na kolejne dni.
-      **Wymaga krótkiego brainstormu** (tydzień vs miesiąc, agenda-lista vs siatka, czy pokazywać rutyny) — jak przy rutynach.
+      Brainstorm domknięty (2026-06-18). Format: agenda-lista, 4. zakładka, tylko zadania z terminem,
+      toggle done z agendy, wszystkie przyszłe bez limitu. Decyzje: `decisions.md` „2026-06-18 — Widok kalendarza".
+  - [ ] P1: Nowa zakładka „Kalendarz" w `BottomNav.tsx` (4. pozycja, ikona `CalendarDays` z Lucide).
+  - [ ] P1: Route `/calendar` w `App.tsx`.
+  - [ ] P1: `features/Calendar.tsx` — agenda-lista: `GET /api/tasks` (już istnieje), filtr `due_at >= today` na froncie,
+        grupowanie po dacie lokalnej, sekcje „Dziś / Jutro / <nazwa dnia> DD MMM" itd.
+  - [ ] P1: `CalendarTaskRow.tsx` (lub reużycie `TaskRow`) — wiersz zadania w agendzie: godzina + treść + toggle done
+        (mutacja `update status` przez `useTaskActions` — już istnieje).
+  - [ ] P1: `EmptyState` gdy brak nadchodzących zadań z terminem.
+  - [ ] P1: Build (tsc+vite+PWA) + ESLint czyste.
+  - [ ] P1: push na `main` → auto-redeploy → weryfikacja na telefonie (user).
 
 ### P2/P3 — Usprawnienia przepływu
 - [ ] P2/P3 #4 — **Pomysł → zadanie jednym klikiem** (domyka „łapię pomysł, później robię zadanie";

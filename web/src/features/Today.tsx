@@ -1,7 +1,7 @@
 // Zakładka „Dziś": nagłówek dnia z pierścieniem postępu, zaległe (wyróżnione) + dzisiejsze zadania,
 // włączanie powiadomień, skrót do pomysłów.
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, BellRing, Sparkles } from "lucide-react";
 import { useTasks, useTaskActions } from "./useTaskActions";
@@ -13,7 +13,7 @@ import { EmptyState } from "../components/EmptyState";
 import { isOverdue, isToday } from "../lib/tasks";
 import { isDoneToday } from "../lib/routines";
 import { getName } from "../lib/settings";
-import { enablePush, notificationsGranted } from "../lib/push";
+import { enablePush, notificationsGranted, syncPushSubscription } from "../lib/push";
 
 // Data w formacie „pon · 16 cze" (wyświetlana uppercase przez CSS).
 function todayEyebrow(): string {
@@ -33,6 +33,18 @@ export function Today() {
 
   const [granted, setGranted] = useState(notificationsGranted());
   const [pushMsg, setPushMsg] = useState<string | null>(null);
+
+  // On mount: verify real browser subscription and sync with backend.
+  // Catches cases where permission is "granted" but subscription expired or was cleared.
+  useEffect(() => {
+    if (!notificationsGranted()) return;
+    syncPushSubscription().then((result) => {
+      setGranted(result.active);
+      if (!result.active && result.reason === "no_subscription") {
+        setPushMsg("Powiadomienia wymagają ponownej aktywacji.");
+      }
+    });
+  }, []);
 
   async function onEnablePush() {
     setPushMsg("Włączam…");
