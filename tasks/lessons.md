@@ -98,3 +98,16 @@ gdy nie ma subskrypcji albo wszystkie wysyłki zawiodą. Live test potwierdził 
 timeout, 429/500, martwej subskrypcji ani pustej listy odbiorców.
 **Jak stosować:** Dla krytycznych pipeline'ów testuj osobno: sukces, błąd przejściowy, błąd trwały i brak odbiorcy. Stan
 „obsłużone" zapisuj dopiero po jednoznacznym potwierdzeniu sukcesu, a nie po samym zakończeniu pętli.
+
+## 2026-06-18 — Testowalność = ekstrakcja do czystej funkcji; logika inline w handlerze Hono jest droga w teście
+**Co:** Dwie poprawki P1 (retry crona, synchronizacja subskrypcji) dało się tanio pokryć testami, bo logika żyła w
+czystych funkcjach z wstrzykiwanymi zależnościami (`scheduler.ts`, `push.ts`) — 15 testów Vitest bez mocka HTTP/D1.
+Walidacja `project_id` siedzi natomiast inline w handlerze `app.post/patch("/api/ideas")`; sensowny test wymagałby
+`app.request()` + mocka `c.env.DB` (prepare/bind/first) + nagłówka Bearer pod middleware auth — dużo rusztowania
+dla jednego `SELECT`. Świadomie odpuszczono test, zostawiając go jako ewentualny P3.
+**Dlaczego ważne:** „Czy to przetestować?" zależy nie od wagi findingu, lecz od kosztu rusztowania. Logika wpleciona
+w handler/kontroler ma ukryty koszt: żeby ją dotknąć testem, musisz postawić cały request + środowisko. Ta sama logika
+w eksportowanej czystej funkcji jest testowalna za darmo.
+**Jak stosować:** Jeśli fragment logiki chcesz móc testować (albo już wiesz, że to ścieżka krytyczna), wyekstrahuj go
+z handlera do czystej funkcji z wstrzykiwanymi zależnościami — jak `processTaskReminders`. Dla trywialnej walidacji
+inline (jeden `SELECT`, clamp) test bywa droższy niż wart; wtedy oprzyj się na tsc + buildzie i odnotuj świadomą rezygnację.
