@@ -4,6 +4,7 @@
 import { api } from "./api";
 
 interface ExportData {
+  format_version: number;
   tasks: unknown[];
   ideas: unknown[];
   projects: unknown[];

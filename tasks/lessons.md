@@ -111,3 +111,12 @@ w eksportowanej czystej funkcji jest testowalna za darmo.
 **Jak stosować:** Jeśli fragment logiki chcesz móc testować (albo już wiesz, że to ścieżka krytyczna), wyekstrahuj go
 z handlera do czystej funkcji z wstrzykiwanymi zależnościami — jak `processTaskReminders`. Dla trywialnej walidacji
 inline (jeden `SELECT`, clamp) test bywa droższy niż wart; wtedy oprzyj się na tsc + buildzie i odnotuj świadomą rezygnację.
+
+## 2026-06-18 — Smoke test D1 z JSON na Windows: użyj `--file`, nie wieloliniowego `--command`
+**Co:** Przy lokalnym teście importu `wrangler d1 execute --command` uruchomił tylko pierwszą linię wieloliniowego SQL,
+a jednowierszowy argument z JSON został zniekształcony przez quoting natywnego procesu Windows (`malformed JSON`).
+Ten sam SQL wykonany przez `--file` w ignorowanym `.tmp/` przeszedł jako 8 poleceń i poprawnie odtworzył dane.
+**Dlaczego ważne:** Import używa `json_each(?)`, więc test musi zachować cudzysłowy JSON i granice wszystkich instrukcji.
+Błąd warstwy CLI może wyglądać jak błąd SQLite lub kodu Workera, mimo że przygotowane zapytania są poprawne.
+**Jak stosować:** Dłuższy SQL lub JSON do lokalnej D1 na Windows zapisuj w jednorazowym pliku `.tmp/*.sql` i uruchamiaj
+przez `wrangler d1 execute ... --file`. `--command` zostaw dla krótkich, pojedynczych zapytań bez złożonego quotingu.

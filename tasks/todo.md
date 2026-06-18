@@ -209,12 +209,35 @@ z userem. Filtr nadrzędny bez zmian: codzienny użytek > liczba funkcji, $0, iz
         BEZ edycji i usuwania (te zostają w „Zadania", zgodnie z decyzją „podgląd + toggle"). Toggle przez `useTaskActions`.
   - [x] P1: `EmptyState` gdy brak nadchodzących zadań z terminem.
   - [x] P1: Build (tsc+vite+PWA) + ESLint czyste.
-  - [ ] P1: push na `main` → auto-redeploy → weryfikacja na telefonie (user).
+  - [x] P1: push na `main` (commit `ea13c40`) → auto-redeploy → **weryfikacja na telefonie POTWIERDZONA przez usera (2026-06-18)**.
 
 ### P2/P3 — Usprawnienia przepływu
-- [ ] P2/P3 #4 — **Pomysł → zadanie jednym klikiem** (domyka „łapię pomysł, później robię zadanie";
-      synergia z priorytetami — ważny pomysł → zadanie z terminem).
-- [ ] P2/P3 #5 — **Import danych** (komplement do eksportu; wejście naturalnie z ekranu „Ustawienia").
+- [~] ~~P2/P3 #4 — **Pomysł → zadanie jednym klikiem**~~ — **SKREŚLONE (2026-06-18) wg realnego użycia.**
+      User używa Pomysłów jako checklisty „things to do", a konkretne terminowe zadania wpisuje wprost w „Zadania" —
+      trzyma oba byty osobno świadomie. Konwersja nie domyka żadnej realnej pętli. Rozważone też odhaczanie pomysłów
+      (checkbox) — odrzucone: dla pomysłów bez archiwum „zrobione" = usunięcie, więc ptaszek dublowałby kosz (chyba że
+      odhaczone zostają przekreślone → puchnąca lista + „Wyczyść zrobione" = przekombinowanie v1). Drzwi otwarte,
+      gdyby przepływ kiedyś się zmienił.
+- [~] P2/P3 #5 — **Import danych = „Odtwórz z kopii" (zastąp wszystko)** — zaimplementowane i wypchnięte (2026-06-18),
+      czeka wyłącznie na weryfikację na telefonie.
+      Wariant A (replace), nie merge (decyzja usera). Lustro eksportu: `{tasks, ideas, projects, routines}`,
+      subskrypcje push NIETKNIĘTE (związane z urządzeniem). Siatka bezpieczeństwa: auto-eksport bieżących danych
+      przed nadpisaniem. Bez zmian schematu D1.
+  - [x] P1: Backend — pure `parseImport(raw): {ok, data|error}` w nowym `worker/src/import.ts` (walidacja kształtu:
+        4 tablice, pola/typy wierszy; zły/uszkodzony JSON → błąd, ZERO dotknięcia danych). Testowalne bez mocka (lekcja sesji 10).
+  - [x] P1: Backend — `POST /api/import` w `index.ts`: `parseImport` → przy błędzie `400`; przy OK jedna transakcja
+        `DB.batch` (DELETE z tasks/ideas/projects/routines + INSERT z pliku, projekty przed pomysłami, ID zachowane).
+        Zwraca podsumowanie (liczby). Brak częściowego importu (wszystko w batchu).
+  - [x] P1: Test Vitest dla `parseImport` (bieżący + 2 starsze formaty, brak tablicy, typy/enumy, duplikaty,
+        osierocony projekt, śmieci, przyszła wersja) — 10/10 nowych, 20/20 worker łącznie.
+  - [x] P1: Front — `lib/import.ts`: czyta `File` (`text()`), `JSON.parse` z obsługą błędu, `POST /api/import`.
+  - [x] P1: Front — `Settings.tsx` sekcja Dane: przycisk „Odtwórz z kopii" + ukryty `<input type=file accept=.json>` +
+        inline dwukrok potwierdzenia („To zastąpi wszystkie dane. Tak · Nie", wzorzec `ConfirmDeleteButton`).
+        Na potwierdzeniu: najpierw `downloadExport()` (siatka), potem import; po sukcesie `invalidateQueries`
+        (tasks/ideas/projects/routines) + komunikat „Odtworzono".
+  - [x] P1: Build (tsc+vite+PWA) + ESLint + worker tsc/test czyste. Front testy 7/7, worker 20/20.
+  - [x] P1: push na `main` → Workers Builds auto-redeploy wyzwolony.
+  - [ ] P1 (live, user): eksport → dodanie tymczasowego rekordu → import kopii → rekord znika, wcześniejsze dane zgodne.
 
 ### P3 — Drobne, gdy zaboli w użyciu
 - [ ] P3 #6 — „Przypomnij X minut wcześniej".

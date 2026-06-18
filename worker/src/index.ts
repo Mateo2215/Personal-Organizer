@@ -6,6 +6,7 @@ import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { sendPush, sendToAll, type StoredSubscription } from "./push";
 import { processTaskReminders } from "./scheduler";
+import { EXPORT_FORMAT_VERSION, parseImport } from "./import";
 
 export interface Env {
   DB: D1Database;
@@ -261,7 +262,7 @@ app.delete("/api/ideas/:id", async (c) => {
   return c.body(null, 204);
 });
 
-// --- Eksport danych: wszystkie zadania, pomysły i projekty jako JSON do pobrania. ---
+// --- Eksport danych: wersjonowana kopia zadań, pomysłów, projektów i rutyn. ---
 app.get("/api/export", async (c) => {
   const [tasksRes, ideasRes, projectsRes, routinesRes] = await Promise.all([
     c.env.DB.prepare("SELECT * FROM tasks ORDER BY created_at ASC, id ASC").all(),
@@ -270,10 +271,82 @@ app.get("/api/export", async (c) => {
     c.env.DB.prepare("SELECT * FROM routines ORDER BY created_at ASC, id ASC").all(),
   ]);
   return c.json({
+    format_version: EXPORT_FORMAT_VERSION,
     tasks: tasksRes.results ?? [],
     ideas: ideasRes.results ?? [],
     projects: projectsRes.results ?? [],
     routines: routinesRes.results ?? [],
+  });
+});
+
+// --- Import danych: pełne odtworzenie z kopii, bez ruszania subskrypcji push. ---
+app.post("/api/import", async (c) => {
+  const parsed = parseImport(await c.req.text());
+  if (!parsed.ok) {
+    return c.json({ error: "invalid import", details: parsed.error }, 400);
+  }
+
+  const { tasks, ideas, projects, routines } = parsed.data;
+  try {
+    await c.env.DB.batch([
+      c.env.DB.prepare("DELETE FROM ideas"),
+      c.env.DB.prepare("DELETE FROM routines"),
+      c.env.DB.prepare("DELETE FROM tasks"),
+      c.env.DB.prepare("DELETE FROM projects"),
+      c.env.DB.prepare(`
+        INSERT INTO projects (id, name, created_at)
+        SELECT
+          CAST(json_extract(value, '$.id') AS INTEGER),
+          json_extract(value, '$.name'),
+          json_extract(value, '$.created_at')
+        FROM json_each(?)
+      `).bind(JSON.stringify(projects)),
+      c.env.DB.prepare(`
+        INSERT INTO tasks (id, content, due_at, has_time, status, reminded_at, created_at, updated_at)
+        SELECT
+          CAST(json_extract(value, '$.id') AS INTEGER),
+          json_extract(value, '$.content'),
+          json_extract(value, '$.due_at'),
+          CAST(json_extract(value, '$.has_time') AS INTEGER),
+          json_extract(value, '$.status'),
+          json_extract(value, '$.reminded_at'),
+          json_extract(value, '$.created_at'),
+          json_extract(value, '$.updated_at')
+        FROM json_each(?)
+      `).bind(JSON.stringify(tasks)),
+      c.env.DB.prepare(`
+        INSERT INTO routines (id, content, last_done_on, created_at)
+        SELECT
+          CAST(json_extract(value, '$.id') AS INTEGER),
+          json_extract(value, '$.content'),
+          json_extract(value, '$.last_done_on'),
+          json_extract(value, '$.created_at')
+        FROM json_each(?)
+      `).bind(JSON.stringify(routines)),
+      c.env.DB.prepare(`
+        INSERT INTO ideas (id, content, project_id, priority, created_at)
+        SELECT
+          CAST(json_extract(value, '$.id') AS INTEGER),
+          json_extract(value, '$.content'),
+          CAST(json_extract(value, '$.project_id') AS INTEGER),
+          CAST(json_extract(value, '$.priority') AS INTEGER),
+          json_extract(value, '$.created_at')
+        FROM json_each(?)
+      `).bind(JSON.stringify(ideas)),
+    ]);
+  } catch (error) {
+    console.error("[import] restore failed", error instanceof Error ? error.message : "unknown error");
+    return c.json({ error: "import failed" }, 500);
+  }
+
+  return c.json({
+    ok: true,
+    imported: {
+      tasks: tasks.length,
+      ideas: ideas.length,
+      projects: projects.length,
+      routines: routines.length,
+    },
   });
 });
 
