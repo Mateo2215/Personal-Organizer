@@ -3,7 +3,7 @@
 /*
   Motyw „Aurora" — ciemny, fioletowy gradient akcentu, glassmorphism.
   Tailwind v4: tokeny designu definiujemy tutaj przez @theme (NIE w tailwind.config.js).
-  Z każdego --color-* Tailwind generuje utilities bg-*/text-*/border-*.
+  Z każdego --color-* Tailwind generuje utilities typu bg, text, border.
 */
 @theme {
   /* Tło i powierzchnie */

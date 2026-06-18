@@ -2,7 +2,8 @@
 // Tap w ołówek przełącza wiersz w tryb edycji (treść + termin). Błąd zapisu nie gubi wpisanej treści.
 
 import { useState, type FormEvent } from "react";
-import { Check, Bell, Pencil, X } from "lucide-react";
+import { Check, Bell, Pencil } from "lucide-react";
+import { ConfirmDeleteButton } from "../components/ConfirmDeleteButton";
 import {
   formatLocal,
   localInputToUtcIso,
@@ -144,14 +145,7 @@ export function TaskRow({
       >
         <Pencil size={15} strokeWidth={2} />
       </button>
-      <button
-        type="button"
-        onClick={onDelete}
-        className="shrink-0 text-faint transition-colors hover:text-alarm"
-        aria-label="Usuń"
-      >
-        <X size={15} strokeWidth={2} />
-      </button>
+      <ConfirmDeleteButton onDelete={onDelete} label="Usuń zadanie" />
     </li>
   );
 }

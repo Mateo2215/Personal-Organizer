@@ -10,7 +10,7 @@ Osobisty organizer na telefon (Android, PWA). Jedno własne miejsce: zadania z t
 - **Baza:** Cloudflare D1 (SQLite).
 - **Scheduler:** Cloudflare Cron Triggers (budzi Workera, który wysyła push).
 - **Powiadomienia:** Web Push (VAPID) + service worker w przeglądarce telefonu.
-- **Auth:** Cloudflare Access (Zero Trust) — bramka z logowaniem Google, tylko właściciel.
+- **Auth (v1):** token aplikacyjny (Bearer) + własne middleware Workera — tylko właściciel. NIE Cloudflare Access (to parking v2+, patrz mapa drogowa #12).
 
 ## Twarde ograniczenia
 - **$0 utrzymania.** Zero płatnych API. Wszystko na darmowych tierach Cloudflare. Jeśli coś grozi kosztem — STOP i zapytaj.

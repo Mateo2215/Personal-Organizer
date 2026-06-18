@@ -3,7 +3,8 @@
 // Na „Dziś" przekazujemy tylko onToggle (sam check), bez ołówka/kosza.
 
 import { useState, type FormEvent } from "react";
-import { Check, Repeat, Pencil, X } from "lucide-react";
+import { Check, Repeat, Pencil } from "lucide-react";
+import { ConfirmDeleteButton } from "../components/ConfirmDeleteButton";
 import type { Routine } from "../lib/routines";
 
 export function RoutineRow({
@@ -124,16 +125,7 @@ export function RoutineRow({
               <Pencil size={15} strokeWidth={2} />
             </button>
           )}
-          {onDelete && (
-            <button
-              type="button"
-              onClick={onDelete}
-              className="shrink-0 text-faint transition-colors hover:text-alarm"
-              aria-label="Usuń rutynę"
-            >
-              <X size={15} strokeWidth={2} />
-            </button>
-          )}
+          {onDelete && <ConfirmDeleteButton onDelete={onDelete} label="Usuń rutynę" />}
         </>
       )}
     </li>

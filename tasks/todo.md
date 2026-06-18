@@ -22,13 +22,13 @@ Pełny raport: `tasks/priority-code-review-2026-06-18.md`.
 - [x] **P1: Nie ustawiaj `reminded_at`, jeśli żaden push nie został przyjęty (2xx).** ✓ 2026-06-18
 - [x] **P1: Weryfikuj i naprawiaj realną subskrypcję push, nie tylko zgodę `Notification.permission`.** ✓ 2026-06-18
 - [x] P1: Dodaj testy regresyjne dla obu ścieżek push. ✓ 2026-06-18 (10+5 testów Vitest)
-- [ ] P2: Odrzucaj nieistniejący `project_id` przy zapisie pomysłu.
-- [ ] P2: Dodaj potwierdzenie lub Undo przed usunięciem zadania, pomysłu i rutyny.
-- [ ] P3: Dodaj bezpieczny fallback dla powrotu z `/settings`.
-- [ ] P3: Usuń ostrzeżenie CSS z komentarza w `web/src/index.css`.
-- [ ] P3: Po osobnym potwierdzeniu zaktualizuj nieaktualny opis auth w `CLAUDE.md`.
+- [x] P2: Odrzucaj nieistniejący `project_id` przy zapisie pomysłu. ✓ 2026-06-18 (helper `projectExists` w POST+PATCH `/api/ideas` → 400 „project not found")
+- [x] P2: Dodaj potwierdzenie lub Undo przed usunięciem zadania, pomysłu i rutyny. ✓ 2026-06-18 (wspólny `ConfirmDeleteButton` — inline dwukrok „Usunąć? Tak · Nie", auto-anulowanie po 3,5 s; w TaskRow/IdeaItem/RoutineRow)
+- [x] P3: Dodaj bezpieczny fallback dla powrotu z `/settings`. ✓ 2026-06-18 (`navigate(-1)` → `navigate("/")` w `Layout.tsx`)
+- [x] P3: Usuń ostrzeżenie CSS z komentarza w `web/src/index.css`. ✓ 2026-06-18 (usunięta sekwencja `*/` z treści komentarza; build bez ostrzeżenia parsera)
+- [x] P3: Po osobnym potwierdzeniu zaktualizuj nieaktualny opis auth w `CLAUDE.md`. ✓ 2026-06-18 (Cloudflare Access → token Bearer, za zgodą usera)
 
-**Bramka:** wdrożenie kalendarza zaczyna się po zamknięciu dwóch punktów P1 i ich testów.
+**Bramka:** wdrożenie kalendarza zaczyna się po zamknięciu dwóch punktów P1 i ich testów. ✓ Spełniona (sesja 9). Sesja 10 domknęła pozostałe P2/P3 (poza opisem auth w `CLAUDE.md`).
 
 ## Model danych (D1)
 - `projects` (id, name, created_at)

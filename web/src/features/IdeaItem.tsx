@@ -2,9 +2,10 @@
 // Błąd zapisu nie gubi wpisanej treści (zostajemy w edycji).
 
 import { useState, type FormEvent } from "react";
-import { Pencil, X, ChevronDown } from "lucide-react";
+import { Pencil, ChevronDown } from "lucide-react";
 import { formatLocal } from "../lib/tasks";
 import { priorityMeta, type Idea, type IdeaPriority } from "../lib/ideas";
+import { ConfirmDeleteButton } from "../components/ConfirmDeleteButton";
 import { PriorityPicker } from "./PriorityPicker";
 import { useProjects, useIdeasActions } from "./useIdeasData";
 
@@ -106,9 +107,7 @@ export function IdeaItem({ idea }: { idea: Idea }) {
       <button onClick={startEdit} aria-label="Edytuj pomysł" className="shrink-0 text-faint transition-colors hover:text-accent">
         <Pencil size={14} strokeWidth={2} />
       </button>
-      <button onClick={() => removeIdea.mutate(idea.id)} aria-label="Usuń pomysł" className="shrink-0 text-faint transition-colors hover:text-alarm">
-        <X size={14} strokeWidth={2} />
-      </button>
+      <ConfirmDeleteButton onDelete={() => removeIdea.mutate(idea.id)} label="Usuń pomysł" size={14} />
     </li>
   );
 }

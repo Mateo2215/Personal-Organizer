@@ -205,11 +205,20 @@ app.get("/api/ideas", async (c) => {
 // Priorytet pomysłu: 1 (niski) | 2 (średni) | 3 (wysoki). Cokolwiek poza tym → 1.
 const clampPriority = (v: unknown): number => (v === 2 || v === 3 ? v : 1);
 
+// Czy projekt o danym id istnieje? Strzeże przed osieroconym (niewidocznym) pomysłem z nieznanym project_id.
+async function projectExists(db: D1Database, id: number): Promise<boolean> {
+  const row = await db.prepare("SELECT 1 FROM projects WHERE id = ?").bind(id).first();
+  return row !== null;
+}
+
 app.post("/api/ideas", async (c) => {
   const body = await c.req.json<{ content?: string; project_id?: number | null; priority?: number }>();
   const content = body.content?.trim();
   if (!content) return c.json({ error: "content required" }, 400);
   const projectId = body.project_id ?? null;
+  if (projectId !== null && !(await projectExists(c.env.DB, projectId))) {
+    return c.json({ error: "project not found" }, 400);
+  }
   const priority = clampPriority(body.priority);
   const row = await c.env.DB.prepare(
     "INSERT INTO ideas (content, project_id, priority) VALUES (?, ?, ?) RETURNING *",
@@ -228,7 +237,13 @@ app.patch("/api/ideas/:id", async (c) => {
     if (!content) return c.json({ error: "content required" }, 400);
     sets.push("content = ?"); binds.push(content);
   }
-  if (body.project_id !== undefined) { sets.push("project_id = ?"); binds.push(body.project_id ?? null); }
+  if (body.project_id !== undefined) {
+    const pid = body.project_id ?? null;
+    if (pid !== null && !(await projectExists(c.env.DB, pid))) {
+      return c.json({ error: "project not found" }, 400);
+    }
+    sets.push("project_id = ?"); binds.push(pid);
+  }
   if (body.priority !== undefined) { sets.push("priority = ?"); binds.push(clampPriority(body.priority)); }
   if (sets.length === 0) return c.json({ error: "nothing to update" }, 400);
 

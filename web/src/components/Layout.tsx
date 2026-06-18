@@ -30,7 +30,7 @@ export function Layout() {
         {/* Wejście do Ustawień (eksport, wylogowanie, personalizacja); na samym ekranie Ustawień — powrót. */}
         {isSettings ? (
           <button
-            onClick={() => navigate(-1)}
+            onClick={() => navigate("/")}
             aria-label="Wstecz"
             className="-m-1 p-2 text-muted transition-colors hover:text-accent"
           >
