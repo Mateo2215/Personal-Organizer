@@ -7,6 +7,7 @@ import { Layout } from "./components/Layout";
 import { Today } from "./features/Today";
 import { TasksPage } from "./features/Tasks";
 import { Ideas } from "./features/Ideas";
+import { Settings } from "./features/Settings";
 import { getToken } from "./lib/token";
 
 const router = createBrowserRouter([
@@ -17,6 +18,7 @@ const router = createBrowserRouter([
       { index: true, element: <Today /> },
       { path: "tasks", element: <TasksPage /> },
       { path: "ideas", element: <Ideas /> },
+      { path: "settings", element: <Settings /> },
     ],
   },
 ]);

@@ -12,6 +12,7 @@ import { ProgressRing } from "../components/ProgressRing";
 import { EmptyState } from "../components/EmptyState";
 import { isOverdue, isToday } from "../lib/tasks";
 import { isDoneToday } from "../lib/routines";
+import { getName } from "../lib/settings";
 import { enablePush, notificationsGranted } from "../lib/push";
 
 // Data w formacie „pon · 16 cze" (wyświetlana uppercase przez CSS).
@@ -28,6 +29,7 @@ export function Today() {
   const { data: routines, isLoading: routinesLoading } = useRoutines();
   const { toggle: toggleRoutine } = useRoutineActions();
   const navigate = useNavigate();
+  const name = getName(); // imię z localStorage (odczyt przy każdym wejściu na „Dziś")
 
   const [granted, setGranted] = useState(notificationsGranted());
   const [pushMsg, setPushMsg] = useState<string | null>(null);
@@ -77,7 +79,7 @@ export function Today() {
         <div>
           <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-accent">{todayEyebrow()}</p>
           <h2 className="mt-1 font-display text-[23px] font-semibold tracking-[-0.02em] text-ink">
-            Dzień dobry 👋
+            Dzień dobry{name ? `, ${name}` : ""} 👋
           </h2>
         </div>
         <ProgressRing done={dayDoneTotal} total={dayTotal} />

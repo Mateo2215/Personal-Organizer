@@ -166,16 +166,20 @@ z userem. Filtr nadrzędny bez zmian: codzienny użytek > liczba funkcji, $0, iz
   - [x] Podgląd wiersza: obwódka/poświata wg wagi (`IdeaItem`) + kropka+etykieta w stopce.
   - [x] Sortowanie wg wagi **wewnątrz** grup (`Ideas.tsx`, stabilny sort — kolejność „najnowsze pierwsze" zachowana).
   - [x] Rename „Skrzynka" → „Ogólne": `ProjectGroup` (nagłówek + komunikat usuwania), `Ideas` (EmptyState), opcje selectów, komentarze.
-  - [ ] **P1 #1a (USER, panel): migracja `0003` w D1 Console** — gołe DDL w jednej linii (bez komentarza `--`, patrz lessons):
-        `ALTER TABLE ideas ADD COLUMN priority INTEGER NOT NULL DEFAULT 1;`
-  - [ ] **P1 #1b: push na `main`** → Workers Builds auto-redeploy. (Kolejność: najpierw migracja w D1, potem push — by świeży kod nie trafił na bazę bez kolumny.)
-  - [ ] **P1 #1c (live): weryfikacja na telefonie** — czytelność palety/obwódki na małym ekranie, domyślny poziom, sortowanie.
-- [ ] **P1 #2 — Ekran „Ustawienia" + personalizacja** (3. pomysł usera).
-      - Nowa podstrona (route) „Ustawienia"; przeniesione tam **Eksport** i **Wyloguj** z menu ⋮ w nagłówku.
-      - **Imię** trzymane w `localStorage` (decyzja: per urządzenie, zero backendu/$0) → powitanie
-        „Dzień dobry, <imię> 👋" w „Dziś" (`Today.tsx:79-81`).
-      - Zostawić miejsce na „inne rzeczy" (przyszłe przełączniki).
-      - Dotyka: nowy route + ikona wejścia w `Layout.tsx` (zamiast/obok ⋮), `lib/settings.ts` (localStorage), `Today.tsx`.
+  - [x] **P1 #1a (USER, panel): migracja `0003` w D1 Console** — potwierdzona przez usera (2026-06-18).
+  - [x] **P1 #1b: push na `main`** (commit `fd30cad`, `7f4b467..fd30cad`) → Workers Builds auto-redeploy wyzwolony.
+  - [x] **P1 #1c (live): weryfikacja na telefonie** — potwierdzona przez usera (2026-06-18): działa.
+- [~] **P1 #2 — Ekran „Ustawienia" + personalizacja** — ZAIMPLEMENTOWANE LOKALNIE (2026-06-18), do dowozu.
+      Build + ESLint czyste. Decyzje: ikona koła zębatego w nagłówku **zastępuje** menu ⋮ (link do `/settings`),
+      na ekranie Ustawień zmienia się w strzałkę wstecz (`navigate(-1)`); dolny pasek zostaje przy 3 zakładkach;
+      imię zapisywane na bieżąco do `localStorage` (klucz `po_user_name`).
+  - [x] `lib/settings.ts` — `getName`/`setName` (localStorage, trim, puste → usuń klucz).
+  - [x] `features/Settings.tsx` — sekcje Personalizacja (imię) / Dane (Eksport) / Konto (Wyloguj). Miejsce na przyszłe przełączniki.
+  - [x] Router: trasa `/settings` w `App.tsx`.
+  - [x] `Layout.tsx` — usunięte menu ⋮ + logika eksportu/wylogowania (przeniesione do Settings); ikona Ustawień/wstecz, tytuł „Ustawienia".
+  - [x] `Today.tsx` — powitanie „Dzień dobry, <imię> 👋" gdy imię ustawione (odczyt `getName()` przy wejściu).
+  - [ ] **P1 #2a: push na `main`** → Workers Builds auto-redeploy (sam front + brak zmian D1 — bezpieczne).
+  - [ ] **P1 #2b (live): weryfikacja na telefonie** — wejście kołem zębatym, zapis imienia, powitanie na „Dziś", eksport, wylogowanie.
 
 ### P2 — Następna duża funkcja
 - [ ] **P2 #3 — Widok kalendarza** (zgłoszony brak nr 2): podgląd zaplanowanego na kolejne dni.
