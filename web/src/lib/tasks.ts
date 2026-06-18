@@ -89,3 +89,24 @@ export function isToday(t: Task): boolean {
   end.setDate(end.getDate() + 1);
   return due >= start && due < end;
 }
+
+// Zaplanowane od dziś w górę: zadanie z terminem nie wcześniejszym niż początek dzisiejszego dnia
+// (czas lokalny). Filtr agendy kalendarza — wszystkie przyszłe bez limitu, łącznie z dzisiejszymi.
+export function isScheduledFromToday(t: Task): boolean {
+  if (!t.due_at) return false;
+  const start = new Date();
+  start.setHours(0, 0, 0, 0);
+  return new Date(t.due_at).getTime() >= start.getTime();
+}
+
+// ISO UTC → klucz dnia lokalnego "YYYY-MM-DD" (do grupowania agendy po dacie).
+export function localDateKey(iso: string): string {
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+// ISO UTC → sama godzina lokalna "HH:mm" (data jest w nagłówku sekcji agendy).
+export function formatTimeLocal(iso: string): string {
+  return new Date(iso).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
+}

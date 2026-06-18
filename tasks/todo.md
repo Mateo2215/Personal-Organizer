@@ -197,17 +197,18 @@ z userem. Filtr nadrzędny bez zmian: codzienny użytek > liczba funkcji, $0, iz
   - [x] **P1 #2b (live): weryfikacja na telefonie** — potwierdzona przez usera (2026-06-18): działa.
 
 ### P2 — Następna duża funkcja
-- [ ] **P2 #3 — Widok kalendarza** (zgłoszony brak nr 2): podgląd zaplanowanego na kolejne dni.
-      Brainstorm domknięty (2026-06-18). Format: agenda-lista, 4. zakładka, tylko zadania z terminem,
-      toggle done z agendy, wszystkie przyszłe bez limitu. Decyzje: `decisions.md` „2026-06-18 — Widok kalendarza".
-  - [ ] P1: Nowa zakładka „Kalendarz" w `BottomNav.tsx` (4. pozycja, ikona `CalendarDays` z Lucide).
-  - [ ] P1: Route `/calendar` w `App.tsx`.
-  - [ ] P1: `features/Calendar.tsx` — agenda-lista: `GET /api/tasks` (już istnieje), filtr `due_at >= today` na froncie,
-        grupowanie po dacie lokalnej, sekcje „Dziś / Jutro / <nazwa dnia> DD MMM" itd.
-  - [ ] P1: `CalendarTaskRow.tsx` (lub reużycie `TaskRow`) — wiersz zadania w agendzie: godzina + treść + toggle done
-        (mutacja `update status` przez `useTaskActions` — już istnieje).
-  - [ ] P1: `EmptyState` gdy brak nadchodzących zadań z terminem.
-  - [ ] P1: Build (tsc+vite+PWA) + ESLint czyste.
+- [~] **P2 #3 — Widok kalendarza** (zgłoszony brak nr 2): podgląd zaplanowanego na kolejne dni.
+      ZAIMPLEMENTOWANE LOKALNIE (2026-06-18), do dowozu. Brainstorm domknięty. Format: agenda-lista, 4. zakładka,
+      tylko zadania z terminem, toggle done z agendy, wszystkie przyszłe bez limitu. Decyzje: `decisions.md`
+      „2026-06-18 — Widok kalendarza". Build (tsc+vite+PWA) + ESLint = czyste.
+  - [x] P1: Nowa zakładka „Kalendarz" w `BottomNav.tsx` (4. pozycja, ikona `CalendarDays` z Lucide).
+  - [x] P1: Route `/calendar` w `App.tsx`.
+  - [x] P1: `features/Calendar.tsx` — agenda-lista: `GET /api/tasks` (już istnieje), filtr `isScheduledFromToday`
+        (due_at od początku dziś lokalnie), grupowanie po dacie lokalnej, nagłówki „Dziś / Jutro / śr · 18 cze".
+  - [x] P1: `CalendarTaskRow.tsx` — świadomie LEKKI wiersz (checkbox toggle + godzina/„cały dzień" + treść),
+        BEZ edycji i usuwania (te zostają w „Zadania", zgodnie z decyzją „podgląd + toggle"). Toggle przez `useTaskActions`.
+  - [x] P1: `EmptyState` gdy brak nadchodzących zadań z terminem.
+  - [x] P1: Build (tsc+vite+PWA) + ESLint czyste.
   - [ ] P1: push na `main` → auto-redeploy → weryfikacja na telefonie (user).
 
 ### P2/P3 — Usprawnienia przepływu

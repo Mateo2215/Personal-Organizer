@@ -1,11 +1,12 @@
 // Dolny pasek nawigacji (3 zakładki, kciukiem pod telefon). Szklisty (backdrop-blur), z ikonami Lucide.
 
 import { NavLink } from "react-router-dom";
-import { Sun, ListChecks, Lightbulb, type LucideIcon } from "lucide-react";
+import { Sun, ListChecks, CalendarDays, Lightbulb, type LucideIcon } from "lucide-react";
 
 const tabs: { to: string; label: string; end: boolean; Icon: LucideIcon }[] = [
   { to: "/", label: "Dziś", end: true, Icon: Sun },
   { to: "/tasks", label: "Zadania", end: false, Icon: ListChecks },
+  { to: "/calendar", label: "Kalendarz", end: false, Icon: CalendarDays },
   { to: "/ideas", label: "Pomysły", end: false, Icon: Lightbulb },
 ];
 
