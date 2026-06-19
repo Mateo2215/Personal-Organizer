@@ -20,6 +20,9 @@ dist/
 # Design reference (handoffy/prototypy — nie commitujemy)
 design/
 
+# Plany robocze (np. z Codexa — trzymamy lokalnie, nie commitujemy)
+docs/
+
 # Logs
 *.log
 npm-debug.log*

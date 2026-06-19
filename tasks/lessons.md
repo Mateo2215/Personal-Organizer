@@ -120,3 +120,12 @@ Ten sam SQL wykonany przez `--file` w ignorowanym `.tmp/` przeszedł jako 8 pole
 Błąd warstwy CLI może wyglądać jak błąd SQLite lub kodu Workera, mimo że przygotowane zapytania są poprawne.
 **Jak stosować:** Dłuższy SQL lub JSON do lokalnej D1 na Windows zapisuj w jednorazowym pliku `.tmp/*.sql` i uruchamiaj
 przez `wrangler d1 execute ... --file`. `--command` zostaw dla krótkich, pojedynczych zapytań bez złożonego quotingu.
+
+## 2026-06-19 — Licznik w UI i harmonogram backendu to dwa niezależne zegary
+**Co:** Przy planowaniu „za X do zadania" łatwo założyć, że minutowe odświeżanie zwiększy liczbę uruchomień crona
+lub requestów do Cloudflare. W rzeczywistości licznik może działać lokalnie w otwartej PWA przez jeden timer na widok,
+podczas gdy Worker nadal uruchamia ten sam cron co minutę i jedynie inaczej wylicza moment kwalifikacji zadania.
+**Dlaczego ważne:** Rozdzielenie prezentacji czasu od dostarczenia push pozwala dodać żywy UX bez kosztu sieciowego,
+nowych triggerów i komplikowania krytycznego pipeline'u przypomnień.
+**Jak stosować:** Dynamiczne etykiety czasu licz po stronie klienta z jednego współdzielonego zegara. Backend angażuj
+tylko wtedy, gdy zmienia się stan lub trzeba wykonać akcję; nie twórz osobnych timerów ani requestów dla każdego wiersza.

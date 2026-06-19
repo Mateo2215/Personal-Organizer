@@ -54,7 +54,8 @@ Pełny raport: `tasks/priority-code-review-2026-06-18.md`.
 - [x] Front — formularz zadania (data+godzina), zgoda na push, subskrypcja, SW (`injectManifest`), TanStack Query
 - [x] P1: Deploy + test push na realnym Androidzie (zamknięta apka, punktualność) — ZREALIZOWANE inną ścieżką (Workers Builds + GitHub, nie Pages+Worker). Patrz Blok C poniżej. Checkbox zaszłościowy.
 - [x] P1: Test cronu — push przyszedł ~1 min po terminie = potwierdzony cykl crona na produkcji (Blok C). Checkbox zaszłościowy.
-- [ ] P1: Obejście optymalizacji baterii (instrukcja + weryfikacja) — śledzone jako C4 poniżej (weryfikacja po długim idle, user-side).
+- [x] P1: Obejście optymalizacji baterii (instrukcja + weryfikacja) — push po długim idle/doze działa,
+      potwierdzone przez usera 2026-06-19 (szczegóły: C4 poniżej).
 
 ### Faza 2 — Zadania w pełni (głównie zrobione)
 - [x] Dolna nawigacja (Dziś / Zadania / Pomysły) + Layout + react-router
@@ -62,7 +63,8 @@ Pełny raport: `tasks/priority-code-review-2026-06-18.md`.
 - [x] Wyróżnienie zaległych (czerwone)
 - [x] Widok „Dziś" (dzisiejsze + zaległe + szybki guzik pomysłu) + włączanie powiadomień
 - [x] P2: Edycja treści/terminu zadania w UI (ołówek → inline form w TaskRow; mutacja `update` w useTaskActions; build OK)
-- [x] P3: Zadania bez terminu (due_at null) — DECYZJA: zostają tylko w „Zadania", „Dziś" pozostaje skupione (dziś+zaległe). Drzwi otwarte na sekcję „Bez terminu", jeśli w użyciu coś będzie umykać.
+- [x] P3: Zadania bez terminu (due_at null) — zostają tylko w „Zadania", „Dziś" pozostaje skupione
+      (dziś+zaległe). Sekcja „Bez terminu" w „Dziś" została ostatecznie odrzucona 2026-06-19 jako nieużyteczna.
 
 ### Faza 3 — Pomysły + projekty ✅ (backend smoke-tested; UI do klika na żywo)
 - [x] P2: Projekty CRUD (dodaj/zmień nazwę/usuń → pomysły do Skrzynki). Backend: GET/POST/PATCH/DELETE /api/projects; DELETE atomowo przez DB.batch przenosi pomysły do Skrzynki. Smoke test OK (project_id→null po usunięciu).
@@ -101,8 +103,8 @@ Build w CI: skrypt `worker` `ci:build` (instaluje front+worker, buduje front), d
 - [x] C1 P1: PWA zainstalowana na ekranie głównym, logowanie tokenem działa.
 - [x] C2 P1: Powiadomienia włączone (zgoda dana, 2 subskrypcje zapisane w D1).
 - [x] C3 P1: Push PRZYSZEDŁ przy zamkniętej apce, punktualnie (~1 min = cykl crona). Strefa OK (13:49 UTC = 15:49 PL).
-- [ ] C4 P2: Obejście optymalizacji baterii — NIEZWERYFIKOWANE przez dłuższy idle. Push zadziałał po krótkim czasie;
-      do sprawdzenia w realnym użyciu czy dochodzi też po wielogodzinnym uśpieniu telefonu (open question).
+- [x] C4 P2: Push po długim idle/doze — POTWIERDZONY przez usera 2026-06-19. Powiadomienie dochodzi także
+      po wielogodzinnym uśpieniu telefonu; nie wymaga dodatkowego obejścia w aplikacji.
 - [x] C5 P1: Kontrola limitów $0 w dashboardzie — POTWIERDZONE 2026-06-17. Plan Workers Free, BRAK karty (fail-closed OK).
       ~360 requests/~6h (cron co minutę + wejścia usera) = <0,5% progu 100k/dobę. Cron „every minute" działa. Ogromny zapas.
       Uwaga: mapa „Request Distribution" pokazuje też region Indie — to cron (wewnętrzna infra CF, nieprzypisana lokalnie)
@@ -218,8 +220,8 @@ z userem. Filtr nadrzędny bez zmian: codzienny użytek > liczba funkcji, $0, iz
       (checkbox) — odrzucone: dla pomysłów bez archiwum „zrobione" = usunięcie, więc ptaszek dublowałby kosz (chyba że
       odhaczone zostają przekreślone → puchnąca lista + „Wyczyść zrobione" = przekombinowanie v1). Drzwi otwarte,
       gdyby przepływ kiedyś się zmienił.
-- [~] P2/P3 #5 — **Import danych = „Odtwórz z kopii" (zastąp wszystko)** — zaimplementowane i wypchnięte (2026-06-18),
-      czeka wyłącznie na weryfikację na telefonie.
+- [~] P2/P3 #5 — **Import danych = „Odtwórz z kopii" (zastąp wszystko)** — zaimplementowane w lokalnym commicie
+      `fb75bfe` (2026-06-18); repo `main` jest `ahead 1`, czeka na push i weryfikację na telefonie.
       Wariant A (replace), nie merge (decyzja usera). Lustro eksportu: `{tasks, ideas, projects, routines}`,
       subskrypcje push NIETKNIĘTE (związane z urządzeniem). Siatka bezpieczeństwa: auto-eksport bieżących danych
       przed nadpisaniem. Bez zmian schematu D1.
@@ -236,12 +238,32 @@ z userem. Filtr nadrzędny bez zmian: codzienny użytek > liczba funkcji, $0, iz
         Na potwierdzeniu: najpierw `downloadExport()` (siatka), potem import; po sukcesie `invalidateQueries`
         (tasks/ideas/projects/routines) + komunikat „Odtworzono".
   - [x] P1: Build (tsc+vite+PWA) + ESLint + worker tsc/test czyste. Front testy 7/7, worker 20/20.
-  - [x] P1: push na `main` → Workers Builds auto-redeploy wyzwolony.
+  - [ ] P1: push lokalnego commita `fb75bfe` na `main` → Workers Builds auto-redeploy.
   - [ ] P1 (live, user): eksport → dodanie tymczasowego rekordu → import kopii → rekord znika, wcześniejsze dane zgodne.
 
 ### P3 — Drobne, gdy zaboli w użyciu
-- [ ] P3 #6 — „Przypomnij X minut wcześniej".
-- [ ] P3 #7 — Sekcja „Bez terminu" w „Dziś" (drzwi otwarte decyzją z 16.06).
+- [ ] **P3 #6 — Przypomnienie z wyprzedzeniem + licznik do terminu.**
+      Decyzje produktowe domknięte 2026-06-19; pełny plan: `docs/plans/task-reminder-offset.md`.
+  - [ ] P1: Migracja `0004_task_reminder_offset.sql` — `tasks.reminder_offset_minutes` z domyślnym `0`;
+        dozwolone wartości: `0`, `15`, `30`, `60`. Istniejące zadania zachowują „O terminie".
+  - [ ] P1: Backend POST/PATCH `/api/tasks` — walidacja offsetu; zmiana terminu lub offsetu ustawia
+        `reminded_at = NULL`; brak terminu wymusza offset `0`.
+  - [ ] P1: Cron nadal co minutę i jeden push na zadanie — kwalifikacja w chwili
+        `due_at - reminder_offset_minutes`; spóźnione ustawienie trafia do najbliższego cyklu.
+  - [ ] P1: Treść push — `Przypomnienie` dla `0`, a dla wyprzedzenia `Za 15 min`, `Za 30 min`
+        lub `Za 1 godz.`; body = treść zadania.
+  - [ ] P1: Front tworzenia i edycji — selektor widoczny tylko po ustawieniu daty i godziny;
+        domyślnie „O terminie", opcje `15 min`, `30 min`, `1 godz.` wcześniej.
+  - [ ] P1: Widoki „Dziś", „Zadania" i „Kalendarz" — termin + lokalny licznik aktualizowany co minutę
+        (`za X` / `X temu`) + ustawione wyprzedzenie. Zadania ukończone nie pokazują licznika.
+  - [ ] P1: Eksport/import — pole zachowane w kopii; starsze kopie bez pola mapują offset na `0`;
+        `format_version` pozostaje `1`, bo zmiana jest addytywna i wstecznie kompatybilna.
+  - [ ] P1: Testy backendu/frontu + lokalny smoke D1 dla `0/15/30/60`, ponownego uzbrojenia i momentu granicznego.
+  - [ ] P1 (USER, panel): migracja `0004` w D1 Console PRZED pushem kodu.
+  - [ ] P1: osobny commit funkcji po commicie importu `fb75bfe` → push na `main` → zielony Workers Build.
+  - [ ] P1 (live, user): zweryfikować na telefonie co najmniej „O terminie" i jeden wariant wcześniejszy.
+- [~] ~~P3 #7 — Sekcja „Bez terminu" w „Dziś"~~ — **SKREŚLONE 2026-06-19** jako nieużyteczne
+      w realnym przepływie. Zadania bez terminu pozostają dostępne w zakładce „Zadania".
 - [ ] P3 #8 — Ręczne sortowanie rutyn (otwarte pytanie — może w ogóle nie uwiera).
 
 ### v2+ — Świadomie zaparkowane (zmiany modelu / strategiczne)
