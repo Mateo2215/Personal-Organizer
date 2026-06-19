@@ -140,3 +140,19 @@ nie ma na produkcji. Błąd na innej wersji w momencie przełączania to zwykle 
 Błąd przypisany do nieaktywnej wersji w okolicy czasu deploya traktuj jako rollover noise, dopóki aktywna ma 0%.
 Logi pojedynczego błędu ścigaj tylko, gdy Error Rate aktywnej wersji rośnie. (Observability na Workers Free bywa
 wyłączone — to opcja, nie wada deploya.)
+
+## 2026-06-19 — Nowa wartość enuma w kolumnie bez CHECK = migracja TYLKO danych, nie schematu
+**Co:** Dodanie 4. stanu priorytetu pomysłu („bez" = 0, nowy domyślny) wyglądało na zmianę schematu, ale `ideas.priority`
+to gołe `INTEGER NOT NULL DEFAULT 1` bez CHECK, a aplikacja **zawsze** podaje wartość jawnie (INSERT/PATCH przez
+`clampPriority`). Więc: (1) `0` było storowalne od zawsze — żadnego ALTER nie trzeba; (2) kolumnowy DEFAULT nigdy nie
+jest używany przez kod, więc jego zmiana (1→0) jest bez znaczenia w praktyce; (3) jedyne, co realnie wymagało ruchu,
+to **dane** — `UPDATE ideas SET priority = 0 WHERE priority = 1`, by stare nieoznaczone pomysły nie zaświeciły nowym
+kolorem „niski". Migracja `0005` to czysty UPDATE, zero DDL.
+**Dlaczego ważne:** Odruch „nowy stan enuma → migracja schematu" prowadzi do niepotrzebnego ALTER (a w SQLite zmiana
+DEFAULT/CHECK to przebudowa tabeli — droga i ryzykowna). Gdy walidacja żyje w warstwie aplikacji, baza często nic nie
+wie o „dozwolonym zbiorze", więc rozszerzenie zbioru jej nie dotyczy.
+**Jak stosować:** Dodajesz wartość do enuma trzymanego jako INTEGER/TEXT? Najpierw sprawdź, czy kolumna ma CHECK i czy
+kod podaje wartość jawnie. Jeśli nie ma CHECK i wartość zawsze jest podawana — pomiń migrację schematu; rozważ tylko
+**UPDATE remapujący istniejące wiersze** (gdy zmiana znaczeń/kolorów dotyka starych danych). Pamiętaj o spójności na
+brzegach: walidacja API (`clampPriority`) i parser importu muszą dopuścić nową wartość — import też zmapuj (legacy bez
+pola → nowy domyślny).
