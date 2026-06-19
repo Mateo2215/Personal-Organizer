@@ -275,9 +275,10 @@ z userem. Filtr nadrzędny bez zmian: codzienny użytek > liczba funkcji, $0, iz
 - [ ] v2 #12 — Cloudflare Access (login Google) jako osobna strona.
 - [ ] v2 #13 — Wariant „AI w narzędziu" (łamie $0 — wymaga osobnej decyzji).
 
-## Sesja 15 — 3 usprawnienia z użycia (2026-06-19) — ZAIMPLEMENTOWANE + ZWERYFIKOWANE LOKALNIE
+## Sesja 15 — 3 usprawnienia z użycia (2026-06-19) — DOWIEZIONE I POTWIERDZONE NA TELEFONIE
 Trzy zmiany z realnego użycia. Scope ustalony pytaniami przed kodem. Build (tsc+vite+PWA) + ESLint +
-worker 26/26 + web 14/14 = czyste. Niezacommitowane. Kolejność dowozu: NAJPIERW UPDATE w D1, potem push.
+worker 26/26 + web 14/14 = czyste. Commit `09b415b` na `main` → auto-redeploy. **User potwierdził na żywo:
+priorytety, rutyny i pasek tygodnia działają na telefonie.** Kolejność dowozu zachowana: UPDATE w D1 przed pushem.
 
 ### ① Priorytety pomysłów — 4 stany + recolor
 Nowy stan „bez" (0, domyślny) + przesunięte kolory: bez=szary, niski=**żółty**, średni=**pomarańczowy**, wysoki=czerwony.
@@ -289,25 +290,49 @@ Schemat D1 bez zmian (kolumna `priority` to zwykły INTEGER; aplikacja zawsze po
 - [x] `PriorityPicker.tsx`: 4 segmenty + `flex-wrap` (nie uciekają na wąskim ekranie).
 - [x] `IdeaItem.tsx`: stan „bez" nie reklamuje się — pokazuje samą datę (bez kropki/etykiety).
 - [x] Migracja `0005_idea_priority_none.sql` (`UPDATE ideas SET priority = 0 WHERE priority = 1`).
-- [ ] **P1 (USER, panel): UPDATE w D1 Console** (gołe, jedna linia) — stare nieoznaczone → „bez".
-- [ ] P1: push na `main` (po UPDATE) → auto-redeploy.
-- [ ] P1 (live, user): weryfikacja na telefonie (kolory + nowy domyślny „bez").
+- [x] **P1 (USER, panel): UPDATE w D1 Console** — wykonany przez usera przed pushem.
+- [x] P1: push na `main` (commit `09b415b`) → auto-redeploy.
+- [x] P1 (live, user): weryfikacja na telefonie — potwierdzona (kolory + nowy domyślny „bez").
 
 ### ② Rutyny — mocna separacja wizualna w „Zadania"
 Sekcja „Codzienne" w osobnym pojemniku (obwódka + lekko inne tło), nagłówek-banda z ikoną ↻ + podtytuł,
 composer rutyn odróżniony od composera zadań (płaskie pole + obrysowany lżejszy przycisk zamiast gradientu).
 Funkcje (dodaj/zmień/usuń/odhacz) bez zmian. Zero zmian D1.
 - [x] `Tasks.tsx`: restyle sekcji „Codzienne" (pojemnik, banda, composer).
-- [ ] P1: push na `main` → auto-redeploy (front-only).
-- [ ] P1 (live, user): weryfikacja na telefonie (czy rutyny już się nie mieszają z zadaniami).
+- [x] P1: push na `main` (commit `09b415b`) → auto-redeploy (front-only).
+- [x] P1 (live, user): weryfikacja na telefonie — potwierdzona (rutyny już się nie mieszają z zadaniami).
 
 ### ③ Kalendarz — kompaktowy pasek tygodnia
 Nad agendą pasek 7 dni (Pn–Nd): kropka na dniach z zadaniami, dziś podświetlone, strzałki ‹ › zmieniają tydzień,
 tap w dzień filtruje agendę do niego (+ „Pokaż wszystkie"). Front-only, czyta istniejące `GET /api/tasks`, zero zmian D1.
 - [x] Nowy `features/WeekStrip.tsx` (prezentacyjny: busyDays + selected + onSelect).
 - [x] `Calendar.tsx`: stan wybranego dnia, `busyDays` z grup, filtr agendy, chip „Pokaż wszystkie", empty state per dzień.
-- [ ] P1: push na `main` → auto-redeploy (front-only).
-- [ ] P1 (live, user): weryfikacja na telefonie (czytelność paska, kropki, nawigacja tygodni).
+- [x] P1: push na `main` (commit `09b415b`) → auto-redeploy (front-only).
+- [x] P1 (live, user): weryfikacja na telefonie — potwierdzona (czytelność paska, kropki, nawigacja tygodni).
+
+## Sesja 16 — ekran gratulacji + odrzucenie tagów i statystyk (2026-06-19)
+Trzy pomysły usera; scope ustalony pytaniami przed kodem. #1 zbudowane, #2/#3 świadomie odrzucone.
+Build (tsc+vite+PWA) + ESLint = czyste. Decyzje trwałe: `../../ai-os/projects/personal-organizer/decisions.md`.
+
+### ① Ekran gratulacji „Dzień zaliczony" — ZAIMPLEMENTOWANE LOKALNIE, do dowozu
+Front-only, zero zmian D1, cron/push nietknięte. Trigger = definicja pierścienia (zadania z terminem na dziś + rutyny),
+`dayComplete = dayTotal > 0 && dayDoneTotal === dayTotal`. Forma = karta in-flow (glass, Aurora). Zaległe nie blokują,
+zostają widoczne pod kartą.
+- [x] Nowy `web/src/components/DayComplete.tsx` (karta glass, `PartyPopper` + aura-badge, podtytuł zależny od zaległych).
+- [x] `features/Today.tsx`: flaga `dayComplete`, render karty z **pierwszeństwem przed `isEmpty`** (fix pułapki
+      „same zadania, wszystko zrobione" → wcześniej zlewało się z pustym dniem), lista rutyn ukryta gdy dzień zaliczony.
+- [x] Build (tsc+vite+PWA) + ESLint czyste.
+- [ ] P1: push na `main` → Workers Builds auto-redeploy (front-only, bez migracji — bezpieczne). Czeka na zgodę usera.
+- [ ] P1 (live, user): odhacz cały dzień → karta zamiast list; sprawdź też wariant z zaległymi pod kartą.
+
+### ② Tagi dla zadań — ODRZUCONE (2026-06-19)
+Świadoma decyzja usera. Brak nazwanego bólu z użycia; łamią linię „zadania bez projektów" (15.06). Pozostają
+zaparkowane w v2 #10 (projekty/tagi jako moduł dla zadań). Drzwi otwarte: gdy pojawi się konkretny, powtarzalny podział.
+
+### ③ Statystyki — ODRZUCONE (2026-06-19)
+Świadoma decyzja usera. Sensowne staty (serie, trendy) wymagają logu zdarzeń, którego apka świadomie nie trzyma
+(„świat tylko dziś bez historii"). Staty „stanowe" w ~80% pokrywa pierścień. Drzwi otwarte dopiero po decyzji
+o zbieraniu historii (osobna tabela logu).
 
 ## Notatki
 - Najpierw Faza 1 (push end-to-end). Ryzyko nr 1: wysyłka Web Push z Workera — udowodnić w spike'u, zanim zbudujemy resztę.

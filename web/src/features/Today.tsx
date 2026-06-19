@@ -11,6 +11,7 @@ import { TaskRow } from "./TaskRow";
 import { RoutineRow } from "./RoutineRow";
 import { ProgressRing } from "../components/ProgressRing";
 import { EmptyState } from "../components/EmptyState";
+import { DayComplete } from "../components/DayComplete";
 import { isOverdue, isToday } from "../lib/tasks";
 import { isDoneToday } from "../lib/routines";
 import { getName } from "../lib/settings";
@@ -86,6 +87,11 @@ export function Today() {
     overdue.length === 0 &&
     todays.length === 0;
 
+  // Dzień zaliczony: cały dzienny plan (zadania z terminem na dziś + rutyny) odhaczony.
+  // Wymaga, by było co skończyć (dayTotal > 0) — pusty dzień to NIE sukces (od tego EmptyState).
+  // Zaległe celowo NIE blokują (są poza pierścieniem); pozostają widoczne pod kartą.
+  const dayComplete = !isLoading && !routinesLoading && dayTotal > 0 && dayDoneTotal === dayTotal;
+
   return (
     <div className="space-y-4">
       {/* Nagłówek dnia */}
@@ -112,7 +118,9 @@ export function Today() {
 
       {isLoading && <p className="text-sm text-faint">Wczytuję…</p>}
 
-      {isEmpty ? (
+      {dayComplete && <DayComplete hasOverdue={overdue.length > 0} />}
+
+      {isEmpty && !dayComplete ? (
         <EmptyState
           icon={Sparkles}
           title="Czysto na dziś"
@@ -124,7 +132,7 @@ export function Today() {
         />
       ) : (
         <>
-          {allRoutines.length > 0 && (
+          {!dayComplete && allRoutines.length > 0 && (
             <section className="space-y-2.5">
               <ul className="space-y-2.5">
                 {allRoutines.map((r) => (
