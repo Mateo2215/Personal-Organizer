@@ -260,8 +260,9 @@ z userem. Filtr nadrzędny bez zmian: codzienny użytek > liczba funkcji, $0, iz
   - [x] P1: Eksport/import — pole zachowane w kopii; starsze kopie bez pola mapują offset na `0`;
         `format_version` pozostaje `1` (zmiana addytywna). INSERT importu z `COALESCE(...,0)`.
   - [x] P1: Testy backendu/frontu + lokalny smoke D1 dla `0/15/30/60` i momentu granicznego. (Re-arm: w kodzie API.)
-  - [ ] P1 (USER, panel): migracja `0004` w D1 Console PRZED pushem kodu.
-  - [ ] P1: osobny commit funkcji po commicie importu `fb75bfe` → push na `main` → zielony Workers Build.
+  - [x] P1 (USER, panel): migracja `0004` w D1 Console PRZED pushem kodu — potwierdzona przez usera (2026-06-19).
+  - [x] P1: osobny commit funkcji (`c17f3cc`) po commicie importu `fb75bfe` → push na `main`
+        (`111dfbc..c17f3cc`) → Workers Builds auto-redeploy wyzwolony.
   - [ ] P1 (live, user): zweryfikować na telefonie co najmniej „O terminie" i jeden wariant wcześniejszy.
 - [~] ~~P3 #7 — Sekcja „Bez terminu" w „Dziś"~~ — **SKREŚLONE 2026-06-19** jako nieużyteczne
       w realnym przepływie. Zadania bez terminu pozostają dostępne w zakładce „Zadania".

@@ -129,3 +129,14 @@ podczas gdy Worker nadal uruchamia ten sam cron co minutę i jedynie inaczej wyl
 nowych triggerów i komplikowania krytycznego pipeline'u przypomnień.
 **Jak stosować:** Dynamiczne etykiety czasu licz po stronie klienta z jednego współdzielonego zegara. Backend angażuj
 tylko wtedy, gdy zmienia się stan lub trzeba wykonać akcję; nie twórz osobnych timerów ani requestów dla każdego wiersza.
+
+## 2026-06-19 — Zdrowie deploya Workers czytaj z „Active deployment" (Error Rate), nie z „Errors by version"
+**Co:** Po pushu Observability/Logs były niedostępne. Wykres „Errors by version" pokazał 1 błąd — ale przypisany
+do NIEAKTYWNEJ wersji w okolicy czasu deploya. Panel „Active deployment" pokazywał aktywną wersję z Error Rate 0%,
+100% ruchu. Czyli żywa wersja była zdrowa, a pojedynczy słupek dotyczył wersji, która już nie obsługuje ruchu.
+**Dlaczego ważne:** Bez dostępu do Logs łatwo spanikować pojedynczym błędem na wykresie i szukać regresji, której
+nie ma na produkcji. Błąd na innej wersji w momencie przełączania to zwykle szum rolloutu, nie defekt nowego kodu.
+**Jak stosować:** Po pushu czytaj Deployments → „Active deployment" → Error Rate jako sygnał zdrowia żywej wersji.
+Błąd przypisany do nieaktywnej wersji w okolicy czasu deploya traktuj jako rollover noise, dopóki aktywna ma 0%.
+Logi pojedynczego błędu ścigaj tylko, gdy Error Rate aktywnej wersji rośnie. (Observability na Workers Free bywa
+wyłączone — to opcja, nie wada deploya.)
