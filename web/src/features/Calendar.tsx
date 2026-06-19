@@ -4,6 +4,7 @@
 import { useMemo } from "react";
 import { CalendarDays } from "lucide-react";
 import { useTasks, useTaskActions } from "./useTaskActions";
+import { useMinuteNow } from "./useMinuteNow";
 import { CalendarTaskRow } from "./CalendarTaskRow";
 import { EmptyState } from "../components/EmptyState";
 import { isScheduledFromToday, localDateKey, type Task } from "../lib/tasks";
@@ -29,6 +30,7 @@ function dayHeading(key: string): string {
 export function Calendar() {
   const { data: tasks, isLoading, isError } = useTasks();
   const { toggle } = useTaskActions();
+  const now = useMinuteNow();
 
   // Filtruj do zaplanowanych od dziś, posortuj rosnąco po terminie, pogrupuj po dacie lokalnej.
   const groups = useMemo(() => {
@@ -73,6 +75,7 @@ export function Calendar() {
               <CalendarTaskRow
                 key={t.id}
                 task={t}
+                now={now}
                 onToggle={() =>
                   toggle.mutate({ id: t.id, status: t.status === "done" ? "open" : "done" })
                 }

@@ -2,6 +2,16 @@
 
 import { api } from "./api";
 
+// Wyprzedzenie przypomnienia: 0 = o terminie, inaczej tyle minut przed terminem.
+export type ReminderOffset = 0 | 15 | 30 | 60;
+
+export const REMINDER_OFFSETS: { value: ReminderOffset; label: string }[] = [
+  { value: 0, label: "O terminie" },
+  { value: 15, label: "15 min wcześniej" },
+  { value: 30, label: "30 min wcześniej" },
+  { value: 60, label: "1 godz. wcześniej" },
+];
+
 export interface Task {
   id: number;
   content: string;
@@ -9,6 +19,7 @@ export interface Task {
   has_time: number; // 1 = ma godzinę, 0 = tylko dzień / brak terminu
   status: "open" | "done";
   reminded_at: string | null;
+  reminder_offset_minutes: number; // 0 | 15 | 30 | 60
   created_at: string;
   updated_at: string;
 }
@@ -17,6 +28,7 @@ export interface NewTask {
   content: string;
   due_at: string | null;
   has_time: boolean;
+  reminder_offset_minutes: ReminderOffset;
 }
 
 // Pola edytowalne zadania (edycja treści/terminu z UI).
@@ -25,6 +37,7 @@ export type TaskPatch = Partial<{
   due_at: string | null;
   has_time: boolean;
   status: "open" | "done";
+  reminder_offset_minutes: ReminderOffset;
 }>;
 
 export const listTasks = () => api<Task[]>("/api/tasks");
@@ -32,10 +45,8 @@ export const listTasks = () => api<Task[]>("/api/tasks");
 export const addTask = (input: NewTask) =>
   api<Task>("/api/tasks", { method: "POST", body: JSON.stringify(input) });
 
-export const patchTask = (
-  id: number,
-  patch: Partial<{ content: string; due_at: string | null; has_time: boolean; status: "open" | "done" }>,
-) => api<Task>(`/api/tasks/${id}`, { method: "PATCH", body: JSON.stringify(patch) });
+export const patchTask = (id: number, patch: TaskPatch) =>
+  api<Task>(`/api/tasks/${id}`, { method: "PATCH", body: JSON.stringify(patch) });
 
 export const deleteTask = (id: number) =>
   api<void>(`/api/tasks/${id}`, { method: "DELETE" });
@@ -109,4 +120,29 @@ export function localDateKey(iso: string): string {
 // ISO UTC → sama godzina lokalna "HH:mm" (data jest w nagłówku sekcji agendy).
 export function formatTimeLocal(iso: string): string {
   return new Date(iso).toLocaleTimeString("pl-PL", { hour: "2-digit", minute: "2-digit" });
+}
+
+// Krótka etykieta ustawionego wyprzedzenia (np. „15 min wcześniej"); null dla „o terminie".
+export function offsetLabel(offset: number): string | null {
+  const found = REMINDER_OFFSETS.find((o) => o.value === offset);
+  return found && found.value !== 0 ? found.label : null;
+}
+
+// Czas względny do terminu liczony od `now` (ms): „za 2 godz." / „15 min temu" / „teraz".
+// `now` podajemy z zegara widoku (useMinuteNow), żeby licznik odświeżał się bez requestów.
+export function formatRelativeToDue(dueIso: string, now: number): string {
+  const diffMs = new Date(dueIso).getTime() - now;
+  const absMin = Math.round(Math.abs(diffMs) / 60000);
+  if (absMin < 1) return "teraz";
+
+  let unit: string;
+  if (absMin < 60) {
+    unit = `${absMin} min`;
+  } else if (absMin < 60 * 24) {
+    unit = `${Math.floor(absMin / 60)} godz.`;
+  } else {
+    const days = Math.floor(absMin / (60 * 24));
+    unit = days === 1 ? "1 dzień" : `${days} dni`;
+  }
+  return diffMs < 0 ? `${unit} temu` : `za ${unit}`;
 }

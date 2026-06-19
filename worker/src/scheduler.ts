@@ -3,6 +3,18 @@
 export interface ReminderTask {
   id: number;
   content: string;
+  reminder_offset_minutes: number;
+}
+
+// Tytuł powiadomienia zależny od wyprzedzenia: 0 = „Przypomnienie", inaczej „Za X".
+// Pure — testowalny bez runtime Workers (handler w index.ts woła go przy budowie payloadu push).
+export function reminderTitle(offsetMinutes: number): string {
+  switch (offsetMinutes) {
+    case 15: return "Za 15 min";
+    case 30: return "Za 30 min";
+    case 60: return "Za 1 godz.";
+    default: return "Przypomnienie";
+  }
 }
 
 // Generic over subscription shape — tests use { id }, production uses StoredSubscription.

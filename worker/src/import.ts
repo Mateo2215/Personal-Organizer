@@ -10,6 +10,7 @@ export interface ImportTask {
   has_time: 0 | 1;
   status: "open" | "done";
   reminded_at: string | null;
+  reminder_offset_minutes: 0 | 15 | 30 | 60;
   created_at: string;
   updated_at: string;
 }
@@ -125,6 +126,12 @@ function parseTask(value: unknown, index: number): ImportTask {
   const status = row.status;
   if (status !== "open" && status !== "done") fail(`tasks[${index}].status is invalid`);
 
+  // Pole dodane w późniejszej wersji aplikacji — brak w starszej kopii mapujemy na 0 (o terminie).
+  const offset = row.reminder_offset_minutes === undefined ? 0 : row.reminder_offset_minutes;
+  if (offset !== 0 && offset !== 15 && offset !== 30 && offset !== 60) {
+    fail(`tasks[${index}].reminder_offset_minutes must be 0, 15, 30 or 60`);
+  }
+
   return {
     id: requirePositiveInteger(row.id, `tasks[${index}].id`),
     content: requireNonEmptyString(row.content, `tasks[${index}].content`),
@@ -132,6 +139,7 @@ function parseTask(value: unknown, index: number): ImportTask {
     has_time: hasTime,
     status,
     reminded_at: requireNullableTimestamp(row.reminded_at, `tasks[${index}].reminded_at`),
+    reminder_offset_minutes: offset,
     created_at: requireTimestamp(row.created_at, `tasks[${index}].created_at`),
     updated_at: requireTimestamp(row.updated_at, `tasks[${index}].updated_at`),
   };

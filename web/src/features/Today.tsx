@@ -6,6 +6,7 @@ import { useNavigate } from "react-router-dom";
 import { Plus, BellRing, Sparkles } from "lucide-react";
 import { useTasks, useTaskActions } from "./useTaskActions";
 import { useRoutines, useRoutineActions } from "./useRoutineActions";
+import { useMinuteNow } from "./useMinuteNow";
 import { TaskRow } from "./TaskRow";
 import { RoutineRow } from "./RoutineRow";
 import { ProgressRing } from "../components/ProgressRing";
@@ -29,6 +30,7 @@ export function Today() {
   const { data: routines, isLoading: routinesLoading } = useRoutines();
   const { toggle: toggleRoutine } = useRoutineActions();
   const navigate = useNavigate();
+  const now = useMinuteNow();
   const name = getName(); // imię z localStorage (odczyt przy każdym wejściu na „Dziś")
 
   const [granted, setGranted] = useState(notificationsGranted());
@@ -148,6 +150,7 @@ export function Today() {
                   <TaskRow
                     key={t.id}
                     task={t}
+                    now={now}
                     overdue
                     onToggle={() => toggle.mutate(toggleArgs(t.id, t.status))}
                     onDelete={() => remove.mutate(t.id)}
@@ -166,6 +169,7 @@ export function Today() {
                   <TaskRow
                     key={t.id}
                     task={t}
+                    now={now}
                     onToggle={() => toggle.mutate(toggleArgs(t.id, t.status))}
                     onDelete={() => remove.mutate(t.id)}
                     onSave={(patch) => update.mutateAsync({ id: t.id, patch })}

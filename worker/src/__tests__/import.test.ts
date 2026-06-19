@@ -13,6 +13,7 @@ function currentBackup() {
       has_time: 1,
       status: "open",
       reminded_at: null,
+      reminder_offset_minutes: 0,
       created_at: timestamp,
       updated_at: timestamp,
     }],
@@ -112,5 +113,37 @@ describe("parseImport", () => {
     const backup = currentBackup();
     backup.format_version = 2;
     expect(parseImport(backup)).toMatchObject({ ok: false, error: "unsupported format_version: 2" });
+  });
+
+  it("mapuje brak reminder_offset_minutes na 0", () => {
+    const backup = currentBackup();
+    const task = { ...backup.tasks[0] } as Record<string, unknown>;
+    delete task.reminder_offset_minutes;
+    backup.tasks = [task as typeof backup.tasks[number]];
+
+    const result = parseImport(backup);
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.data.tasks[0].reminder_offset_minutes).toBe(0);
+  });
+
+  it("przyjmuje dozwolone wartości wyprzedzenia", () => {
+    for (const value of [0, 15, 30, 60] as const) {
+      const backup = currentBackup();
+      backup.tasks[0].reminder_offset_minutes = value;
+      const result = parseImport(backup);
+      expect(result.ok).toBe(true);
+      if (!result.ok) continue;
+      expect(result.data.tasks[0].reminder_offset_minutes).toBe(value);
+    }
+  });
+
+  it("odrzuca nieprawidłową wartość wyprzedzenia", () => {
+    const backup = currentBackup();
+    backup.tasks[0].reminder_offset_minutes = 45 as 0;
+    expect(parseImport(backup)).toMatchObject({
+      ok: false,
+      error: "tasks[0].reminder_offset_minutes must be 0, 15, 30 or 60",
+    });
   });
 });

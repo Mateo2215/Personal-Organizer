@@ -4,22 +4,28 @@
 import { useState, type FormEvent } from "react";
 import { Check, Bell, Pencil } from "lucide-react";
 import { ConfirmDeleteButton } from "../components/ConfirmDeleteButton";
+import { ReminderOffsetPicker } from "./ReminderOffsetPicker";
 import {
   formatLocal,
+  formatRelativeToDue,
   localInputToUtcIso,
+  offsetLabel,
   utcIsoToLocalInput,
+  type ReminderOffset,
   type Task,
   type TaskPatch,
 } from "../lib/tasks";
 
 export function TaskRow({
   task,
+  now,
   onToggle,
   onDelete,
   onSave,
   overdue,
 }: {
   task: Task;
+  now: number;
   onToggle: () => void;
   onDelete: () => void;
   onSave: (patch: TaskPatch) => Promise<unknown>;
@@ -28,16 +34,19 @@ export function TaskRow({
   const [editing, setEditing] = useState(false);
   const [content, setContent] = useState(task.content);
   const [due, setDue] = useState(utcIsoToLocalInput(task.has_time ? task.due_at : null));
+  const [offset, setOffset] = useState<ReminderOffset>((task.reminder_offset_minutes as ReminderOffset) ?? 0);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(false);
 
   const done = task.status === "done";
   const hasTime = !!task.has_time;
+  const reminderLabel = offsetLabel(task.reminder_offset_minutes);
 
   function startEdit() {
     // Świeży snapshot zadania przy każdym wejściu w edycję (gdyby zmieniło się w tle).
     setContent(task.content);
     setDue(utcIsoToLocalInput(task.has_time ? task.due_at : null));
+    setOffset((task.reminder_offset_minutes as ReminderOffset) ?? 0);
     setError(false);
     setEditing(true);
   }
@@ -49,7 +58,13 @@ export function TaskRow({
     setSaving(true);
     setError(false);
     try {
-      await onSave({ content: text, due_at: due ? localInputToUtcIso(due) : null, has_time: !!due });
+      // Bez terminu nie ma wyprzedzenia — wymuś 0 (backend i tak to wymusi).
+      await onSave({
+        content: text,
+        due_at: due ? localInputToUtcIso(due) : null,
+        has_time: !!due,
+        reminder_offset_minutes: due ? offset : 0,
+      });
       setEditing(false);
     } catch {
       // Zapis padł (np. brak sieci) — zostajemy w edycji, treść użytkownika nietknięta.
@@ -76,6 +91,13 @@ export function TaskRow({
             onChange={(e) => setDue(e.target.value)}
             className="w-full rounded-[12px] border border-card-border bg-field px-3 py-2 text-sm text-muted outline-none focus:border-accent/60"
           />
+          {/* Wyprzedzenie tylko, gdy ustawiono termin z godziną. */}
+          {due && (
+            <div className="flex items-center gap-2 text-xs text-muted">
+              <Bell size={13} strokeWidth={2} className="shrink-0 text-accent" />
+              <ReminderOffsetPicker value={offset} onChange={setOffset} />
+            </div>
+          )}
           <div className="flex gap-2">
             <button
               type="submit"
@@ -134,7 +156,13 @@ export function TaskRow({
         >
           {hasTime && <Bell size={12} strokeWidth={2} />}
           {formatLocal(hasTime ? task.due_at : null)}
+          {hasTime && !done && task.due_at && (
+            <span className="font-medium text-faint">· {formatRelativeToDue(task.due_at, now)}</span>
+          )}
         </p>
+        {reminderLabel && (
+          <p className="mt-0.5 text-[11px] text-faint">Przypomnienie: {reminderLabel}</p>
+        )}
       </div>
 
       <button

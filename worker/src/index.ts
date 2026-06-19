@@ -5,7 +5,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { sendPush, sendToAll, type StoredSubscription } from "./push";
-import { processTaskReminders } from "./scheduler";
+import { processTaskReminders, reminderTitle } from "./scheduler";
 import { EXPORT_FORMAT_VERSION, parseImport } from "./import";
 
 export interface Env {
@@ -53,6 +53,14 @@ app.post("/api/subscribe", async (c) => {
 });
 
 // --- Zadania ---
+// Wyprzedzenie przypomnienia: dozwolone wyłącznie 0 (o terminie) / 15 / 30 / 60 min wcześniej.
+const ALLOWED_OFFSETS = [0, 15, 30, 60];
+// undefined → 0 (domyślne). Wartość spoza zestawu → null (handler zwraca 400).
+function readOffset(value: unknown): number | null {
+  if (value === undefined) return 0;
+  return ALLOWED_OFFSETS.includes(value as number) ? (value as number) : null;
+}
+
 app.get("/api/tasks", async (c) => {
   const res = await c.env.DB.prepare(
     "SELECT * FROM tasks ORDER BY (due_at IS NULL), due_at ASC, created_at ASC",
@@ -61,14 +69,23 @@ app.get("/api/tasks", async (c) => {
 });
 
 app.post("/api/tasks", async (c) => {
-  const body = await c.req.json<{ content?: string; due_at?: string | null; has_time?: boolean }>();
+  const body = await c.req.json<{
+    content?: string;
+    due_at?: string | null;
+    has_time?: boolean;
+    reminder_offset_minutes?: number;
+  }>();
   const content = body.content?.trim();
   if (!content) return c.json({ error: "content required" }, 400);
   const dueAt = body.due_at ?? null;
   const hasTime = body.has_time === false ? 0 : 1;
+  const offset = readOffset(body.reminder_offset_minutes);
+  if (offset === null) return c.json({ error: "invalid reminder offset" }, 400);
+  // Wyprzedzenie ma sens tylko dla terminu z godziną — w przeciwnym razie wymuś 0.
+  const effectiveOffset = dueAt !== null && hasTime === 1 ? offset : 0;
   const row = await c.env.DB.prepare(
-    "INSERT INTO tasks (content, due_at, has_time) VALUES (?, ?, ?) RETURNING *",
-  ).bind(content, dueAt, hasTime).first();
+    "INSERT INTO tasks (content, due_at, has_time, reminder_offset_minutes) VALUES (?, ?, ?, ?) RETURNING *",
+  ).bind(content, dueAt, hasTime, effectiveOffset).first();
   return c.json(row, 201);
 });
 
@@ -79,19 +96,29 @@ app.patch("/api/tasks/:id", async (c) => {
     due_at?: string | null;
     has_time?: boolean;
     status?: "open" | "done";
+    reminder_offset_minutes?: number;
   }>();
 
   const sets: string[] = [];
   const binds: unknown[] = [];
+  // Zmiana terminu LUB wyprzedzenia „uzbraja" przypomnienie na nowo (reminded_at = NULL).
+  let rearm = false;
   if (body.content !== undefined) { sets.push("content = ?"); binds.push(body.content.trim()); }
   if (body.status !== undefined) { sets.push("status = ?"); binds.push(body.status); }
   if (body.has_time !== undefined) { sets.push("has_time = ?"); binds.push(body.has_time ? 1 : 0); }
-  // Zmiana terminu „uzbraja" przypomnienie na nowo (reminded_at = NULL).
   if (body.due_at !== undefined) {
     sets.push("due_at = ?"); binds.push(body.due_at);
-    sets.push("reminded_at = NULL");
+    rearm = true;
+  }
+  // Wyprzedzenie: waliduj zamknięty zestaw; usunięcie terminu (due_at = null) wymusza 0.
+  if (body.reminder_offset_minutes !== undefined || body.due_at === null) {
+    const offset = readOffset(body.reminder_offset_minutes);
+    if (offset === null) return c.json({ error: "invalid reminder offset" }, 400);
+    sets.push("reminder_offset_minutes = ?"); binds.push(body.due_at === null ? 0 : offset);
+    rearm = true;
   }
   if (sets.length === 0) return c.json({ error: "nothing to update" }, 400);
+  if (rearm) sets.push("reminded_at = NULL");
 
   sets.push("updated_at = ?"); binds.push(nowIso());
   binds.push(id);
@@ -302,7 +329,7 @@ app.post("/api/import", async (c) => {
         FROM json_each(?)
       `).bind(JSON.stringify(projects)),
       c.env.DB.prepare(`
-        INSERT INTO tasks (id, content, due_at, has_time, status, reminded_at, created_at, updated_at)
+        INSERT INTO tasks (id, content, due_at, has_time, status, reminded_at, reminder_offset_minutes, created_at, updated_at)
         SELECT
           CAST(json_extract(value, '$.id') AS INTEGER),
           json_extract(value, '$.content'),
@@ -310,6 +337,7 @@ app.post("/api/import", async (c) => {
           CAST(json_extract(value, '$.has_time') AS INTEGER),
           json_extract(value, '$.status'),
           json_extract(value, '$.reminded_at'),
+          CAST(COALESCE(json_extract(value, '$.reminder_offset_minutes'), 0) AS INTEGER),
           json_extract(value, '$.created_at'),
           json_extract(value, '$.updated_at')
         FROM json_each(?)
@@ -362,11 +390,13 @@ export default {
   // Cron co minutę: znajdź zadania do przypomnienia teraz, wyślij push, zaznacz reminded_at.
   async scheduled(_event: ScheduledEvent, env: Env, _ctx: ExecutionContext): Promise<void> {
     const now = nowIso();
+    // Zadanie należne, gdy moment przypomnienia (due_at minus wyprzedzenie) już nadszedł.
     const due = await env.DB.prepare(
-      `SELECT id, content FROM tasks
+      `SELECT id, content, reminder_offset_minutes FROM tasks
        WHERE status = 'open' AND has_time = 1 AND reminded_at IS NULL
-         AND due_at IS NOT NULL AND due_at <= ?`,
-    ).bind(now).all<{ id: number; content: string }>();
+         AND due_at IS NOT NULL
+         AND unixepoch(due_at) - reminder_offset_minutes * 60 <= unixepoch(?)`,
+    ).bind(now).all<{ id: number; content: string; reminder_offset_minutes: number }>();
 
     const tasks = due.results ?? [];
     if (tasks.length === 0) return;
@@ -379,7 +409,7 @@ export default {
     await processTaskReminders(tasks, subs, {
       sendPush: (sub, task) =>
         sendPush(env, sub, {
-          title: "Przypomnienie",
+          title: reminderTitle(task.reminder_offset_minutes),
           body: task.content,
           tag: `task-${task.id}`,
         }),

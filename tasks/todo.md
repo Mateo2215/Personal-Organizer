@@ -242,23 +242,24 @@ z userem. Filtr nadrzędny bez zmian: codzienny użytek > liczba funkcji, $0, iz
   - [ ] P1 (live, user): eksport → dodanie tymczasowego rekordu → import kopii → rekord znika, wcześniejsze dane zgodne.
 
 ### P3 — Drobne, gdy zaboli w użyciu
-- [ ] **P3 #6 — Przypomnienie z wyprzedzeniem + licznik do terminu.**
-      Decyzje produktowe domknięte 2026-06-19; pełny plan: `docs/plans/task-reminder-offset.md`.
-  - [ ] P1: Migracja `0004_task_reminder_offset.sql` — `tasks.reminder_offset_minutes` z domyślnym `0`;
+- [~] **P3 #6 — Przypomnienie z wyprzedzeniem + licznik do terminu.** ZAIMPLEMENTOWANE I ZWERYFIKOWANE
+      LOKALNIE (sesja 14, 2026-06-19), niezacommitowane. Plan: `docs/plans/task-reminder-offset.md`.
+      Weryfikacja: worker 26/26 + tsc, web 14/14 + lint + build, lokalny smoke D1 (kwalifikacja crona + granica) — czyste.
+  - [x] P1: Migracja `0004_task_reminder_offset.sql` — `tasks.reminder_offset_minutes` z domyślnym `0`;
         dozwolone wartości: `0`, `15`, `30`, `60`. Istniejące zadania zachowują „O terminie".
-  - [ ] P1: Backend POST/PATCH `/api/tasks` — walidacja offsetu; zmiana terminu lub offsetu ustawia
-        `reminded_at = NULL`; brak terminu wymusza offset `0`.
-  - [ ] P1: Cron nadal co minutę i jeden push na zadanie — kwalifikacja w chwili
-        `due_at - reminder_offset_minutes`; spóźnione ustawienie trafia do najbliższego cyklu.
-  - [ ] P1: Treść push — `Przypomnienie` dla `0`, a dla wyprzedzenia `Za 15 min`, `Za 30 min`
-        lub `Za 1 godz.`; body = treść zadania.
-  - [ ] P1: Front tworzenia i edycji — selektor widoczny tylko po ustawieniu daty i godziny;
+  - [x] P1: Backend POST/PATCH `/api/tasks` — walidacja offsetu (`readOffset`, 400 dla spoza zestawu);
+        zmiana terminu lub offsetu ustawia `reminded_at = NULL`; brak terminu wymusza offset `0`.
+  - [x] P1: Cron nadal co minutę i jeden push na zadanie — kwalifikacja w chwili
+        `unixepoch(due_at) - reminder_offset_minutes*60 <= unixepoch(now)`; spóźnione → najbliższy cykl.
+  - [x] P1: Treść push (`reminderTitle` w `scheduler.ts`) — `Przypomnienie` dla `0`, a dla wyprzedzenia
+        `Za 15 min`, `Za 30 min` lub `Za 1 godz.`; body = treść zadania.
+  - [x] P1: Front tworzenia i edycji — `ReminderOffsetPicker` widoczny tylko po ustawieniu daty i godziny;
         domyślnie „O terminie", opcje `15 min`, `30 min`, `1 godz.` wcześniej.
-  - [ ] P1: Widoki „Dziś", „Zadania" i „Kalendarz" — termin + lokalny licznik aktualizowany co minutę
-        (`za X` / `X temu`) + ustawione wyprzedzenie. Zadania ukończone nie pokazują licznika.
-  - [ ] P1: Eksport/import — pole zachowane w kopii; starsze kopie bez pola mapują offset na `0`;
-        `format_version` pozostaje `1`, bo zmiana jest addytywna i wstecznie kompatybilna.
-  - [ ] P1: Testy backendu/frontu + lokalny smoke D1 dla `0/15/30/60`, ponownego uzbrojenia i momentu granicznego.
+  - [x] P1: Widoki „Dziś", „Zadania" i „Kalendarz" — termin + lokalny licznik (`useMinuteNow`, `za X` / `X temu`)
+        + ustawione wyprzedzenie. Zadania ukończone nie pokazują licznika.
+  - [x] P1: Eksport/import — pole zachowane w kopii; starsze kopie bez pola mapują offset na `0`;
+        `format_version` pozostaje `1` (zmiana addytywna). INSERT importu z `COALESCE(...,0)`.
+  - [x] P1: Testy backendu/frontu + lokalny smoke D1 dla `0/15/30/60` i momentu granicznego. (Re-arm: w kodzie API.)
   - [ ] P1 (USER, panel): migracja `0004` w D1 Console PRZED pushem kodu.
   - [ ] P1: osobny commit funkcji po commicie importu `fb75bfe` → push na `main` → zielony Workers Build.
   - [ ] P1 (live, user): zweryfikować na telefonie co najmniej „O terminie" i jeden wariant wcześniejszy.

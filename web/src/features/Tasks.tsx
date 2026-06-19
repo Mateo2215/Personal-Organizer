@@ -2,13 +2,15 @@
 
 import { useState, type FormEvent } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Calendar, ListChecks, Repeat } from "lucide-react";
-import { addTask, localInputToUtcIso, isOverdue, isToday, isUpcoming } from "../lib/tasks";
+import { BellRing, Calendar, ListChecks, Repeat } from "lucide-react";
+import { addTask, localInputToUtcIso, isOverdue, isToday, isUpcoming, type ReminderOffset } from "../lib/tasks";
 import { isDoneToday } from "../lib/routines";
 import { useTasks, useTaskActions } from "./useTaskActions";
 import { useRoutines, useRoutineActions } from "./useRoutineActions";
+import { useMinuteNow } from "./useMinuteNow";
 import { TaskRow } from "./TaskRow";
 import { RoutineRow } from "./RoutineRow";
+import { ReminderOffsetPicker } from "./ReminderOffsetPicker";
 import { EmptyState } from "../components/EmptyState";
 
 type Filter = "all" | "today" | "upcoming";
@@ -42,8 +44,10 @@ export function TasksPage() {
 
   const [content, setContent] = useState("");
   const [due, setDue] = useState("");
+  const [offset, setOffset] = useState<ReminderOffset>(0);
   const [filter, setFilter] = useState<Filter>("all");
   const [routineContent, setRoutineContent] = useState("");
+  const now = useMinuteNow();
 
   function submitRoutine(e: FormEvent) {
     e.preventDefault();
@@ -60,9 +64,14 @@ export function TasksPage() {
     const text = content.trim();
     if (!text) return;
     add.mutate(
-      { content: text, due_at: due ? localInputToUtcIso(due) : null, has_time: !!due },
+      {
+        content: text,
+        due_at: due ? localInputToUtcIso(due) : null,
+        has_time: !!due,
+        reminder_offset_minutes: due ? offset : 0,
+      },
       // Czyścimy pola dopiero po udanym zapisie — przy błędzie treść zostaje (brak utraty).
-      { onSuccess: () => { setContent(""); setDue(""); } },
+      { onSuccess: () => { setContent(""); setDue(""); setOffset(0); } },
     );
   }
 
@@ -103,6 +112,13 @@ export function TasksPage() {
             {add.isPending ? "Dodaję…" : "Dodaj"}
           </button>
         </div>
+        {/* Wyprzedzenie tylko, gdy ustawiono termin z godziną. */}
+        {due && (
+          <div className="flex items-center gap-2 text-xs text-muted">
+            <BellRing size={14} strokeWidth={2} className="shrink-0 text-accent" />
+            <ReminderOffsetPicker value={offset} onChange={setOffset} />
+          </div>
+        )}
         {add.isError && (
           <p className="text-sm text-alarm-text">Nie udało się zapisać — treść zachowana, spróbuj ponownie.</p>
         )}
@@ -140,6 +156,7 @@ export function TasksPage() {
             <TaskRow
               key={t.id}
               task={t}
+              now={now}
               overdue={isOverdue(t)}
               onToggle={() => toggle.mutate({ id: t.id, status: t.status === "done" ? "open" : "done" })}
               onDelete={() => remove.mutate(t.id)}

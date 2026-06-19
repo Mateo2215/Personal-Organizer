@@ -2,17 +2,21 @@
 // Świadomie lekki — bez edycji i usuwania (te żyją w „Zadania"); kalendarz to podgląd + odhaczanie.
 
 import { Check, Clock } from "lucide-react";
-import { formatTimeLocal, type Task } from "../lib/tasks";
+import { formatRelativeToDue, formatTimeLocal, offsetLabel, type Task } from "../lib/tasks";
 
 export function CalendarTaskRow({
   task,
+  now,
   onToggle,
 }: {
   task: Task;
+  now: number;
   onToggle: () => void;
 }) {
   const done = task.status === "done";
   const hasTime = !!task.has_time;
+  const reminderLabel = offsetLabel(task.reminder_offset_minutes);
+  const showCountdown = !done && !!task.due_at;
 
   return (
     <li
@@ -47,9 +51,17 @@ export function CalendarTaskRow({
         )}
       </span>
 
-      <p className={`min-w-0 flex-1 truncate text-[14.5px] ${done ? "text-[#8a8699] line-through" : "text-ink"}`}>
-        {task.content}
-      </p>
+      <div className="min-w-0 flex-1">
+        <p className={`truncate text-[14.5px] ${done ? "text-[#8a8699] line-through" : "text-ink"}`}>
+          {task.content}
+        </p>
+        {(showCountdown || reminderLabel) && (
+          <p className="mt-0.5 text-[11px] text-faint">
+            {showCountdown && formatRelativeToDue(task.due_at!, now)}
+            {reminderLabel && `${showCountdown ? " · " : ""}${reminderLabel}`}
+          </p>
+        )}
+      </div>
     </li>
   );
 }

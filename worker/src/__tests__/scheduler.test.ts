@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
-import { processTaskReminders } from "../scheduler";
+import { processTaskReminders, reminderTitle } from "../scheduler";
 
-const task = { id: 1, content: "Spotkanie z klientem" };
+const task = { id: 1, content: "Spotkanie z klientem", reminder_offset_minutes: 0 };
 const sub = { id: 10 };
 
 function makeDeps(sendResult: () => Promise<number>) {
@@ -79,7 +79,7 @@ describe("processTaskReminders", () => {
   });
 
   it("przetwarza wiele zadań niezależnie", async () => {
-    const task2 = { id: 2, content: "Drugie zadanie" };
+    const task2 = { id: 2, content: "Drugie zadanie", reminder_offset_minutes: 0 };
     const sendPush = vi.fn()
       .mockResolvedValueOnce(201) // task 1 — sukces
       .mockResolvedValueOnce(500); // task 2 — błąd
@@ -91,5 +91,21 @@ describe("processTaskReminders", () => {
     await processTaskReminders([task, task2], [sub], deps);
     expect(deps.setRemindedAt).toHaveBeenCalledOnce();
     expect(deps.setRemindedAt).toHaveBeenCalledWith(task.id);
+  });
+});
+
+describe("reminderTitle", () => {
+  it("dla offsetu 0 zwraca tytul o terminie", () => {
+    expect(reminderTitle(0)).toBe("Przypomnienie");
+  });
+
+  it("dla wyprzedzen zwraca etykiete Za X", () => {
+    expect(reminderTitle(15)).toBe("Za 15 min");
+    expect(reminderTitle(30)).toBe("Za 30 min");
+    expect(reminderTitle(60)).toBe("Za 1 godz.");
+  });
+
+  it("dla nieznanej wartosci spada do tytulu o terminie", () => {
+    expect(reminderTitle(45)).toBe("Przypomnienie");
   });
 });
