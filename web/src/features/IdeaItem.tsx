@@ -100,8 +100,14 @@ export function IdeaItem({ idea }: { idea: Idea }) {
       <div className="min-w-0 flex-1">
         <p className="whitespace-pre-wrap break-words text-sm leading-[1.4] text-ink">{idea.content}</p>
         <p className="mt-1 flex items-center gap-1.5 text-[10.5px] text-faint">
-          <span className={`h-1.5 w-1.5 rounded-full ${meta.dotClass}`} aria-hidden />
-          {meta.label} · {formatLocal(idea.created_at)}
+          {/* „Bez" priorytetu nie reklamuje się — pokazujemy wtedy samą datę. */}
+          {idea.priority !== 0 && (
+            <>
+              <span className={`h-1.5 w-1.5 rounded-full ${meta.dotClass}`} aria-hidden />
+              {meta.label} ·{" "}
+            </>
+          )}
+          {formatLocal(idea.created_at)}
         </p>
       </div>
       <button onClick={startEdit} aria-label="Edytuj pomysł" className="shrink-0 text-faint transition-colors hover:text-accent">

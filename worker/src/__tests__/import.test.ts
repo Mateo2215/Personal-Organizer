@@ -55,7 +55,7 @@ describe("parseImport", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.data.routines).toEqual([]);
-    expect(result.data.ideas[0].priority).toBe(1);
+    expect(result.data.ideas[0].priority).toBe(0);
   });
 
   it("przyjmuje starszy eksport z routines, ale bez priority", () => {
@@ -69,7 +69,7 @@ describe("parseImport", () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     expect(result.data.routines).toHaveLength(1);
-    expect(result.data.ideas[0].priority).toBe(1);
+    expect(result.data.ideas[0].priority).toBe(0);
   });
 
   it("odrzuca brak wymaganej tablicy", () => {

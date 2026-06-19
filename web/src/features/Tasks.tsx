@@ -169,14 +169,20 @@ export function TasksPage() {
         </ul>
       )}
 
-      {/* Codzienne (rutyny) — powtarzalne zadania bez godziny i bez push; odhaczasz je w „Dziś". */}
-      <section className="space-y-3 pt-2">
-        <h3 className="flex items-center gap-2 text-[13px] font-bold text-subtle">
-          <Repeat size={15} strokeWidth={2.5} className="text-accent" />
-          Codzienne
-        </h3>
+      {/* Codzienne (rutyny) — wyraźnie oddzielona strefa: powtarzalne obowiązki bez godziny i bez push.
+          Inny pojemnik, nagłówek-banda i lżejszy composer odróżniają je od zadań z terminem powyżej. */}
+      <section className="mt-3 space-y-3 rounded-[20px] border border-card-border bg-white/[0.025] p-4">
+        <div className="flex items-center gap-2.5">
+          <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-accent/10 text-accent">
+            <Repeat size={14} strokeWidth={2.5} />
+          </span>
+          <div className="leading-tight">
+            <p className="text-[11px] font-bold uppercase tracking-[0.14em] text-accent">Codzienne</p>
+            <p className="text-[11px] text-faint">Powtarza się każdego dnia · odhaczasz w „Dziś”</p>
+          </div>
+        </div>
 
-        <form onSubmit={submitRoutine} className="flex items-center gap-2 rounded-[18px] border border-card-border bg-card p-[13px]">
+        <form onSubmit={submitRoutine} className="flex items-center gap-2 rounded-[14px] border border-card-border bg-field px-3.5 py-2.5">
           <input
             value={routineContent}
             onChange={(e) => setRoutineContent(e.target.value)}
@@ -186,7 +192,7 @@ export function TasksPage() {
           <button
             type="submit"
             disabled={addRoutine.isPending || !routineContent.trim()}
-            className="accent-gradient shrink-0 rounded-[14px] px-5 py-2 text-sm font-bold text-white disabled:opacity-50"
+            className="shrink-0 rounded-[12px] border border-accent/40 bg-accent/10 px-4 py-1.5 text-sm font-semibold text-accent transition-colors hover:bg-accent/15 disabled:opacity-50"
           >
             {addRoutine.isPending ? "Dodaję…" : "Dodaj"}
           </button>

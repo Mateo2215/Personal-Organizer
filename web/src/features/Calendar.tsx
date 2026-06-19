@@ -1,11 +1,12 @@
 // Zakładka „Kalendarz": agenda-lista nadchodzących zadań z terminem, pogrupowana po dacie lokalnej.
 // Tylko zadania z terminem (bez rutyn), wszystkie przyszłe od dziś. Tap = toggle done; edycja w „Zadania".
 
-import { useMemo } from "react";
-import { CalendarDays } from "lucide-react";
+import { useMemo, useState } from "react";
+import { CalendarDays, X } from "lucide-react";
 import { useTasks, useTaskActions } from "./useTaskActions";
 import { useMinuteNow } from "./useMinuteNow";
 import { CalendarTaskRow } from "./CalendarTaskRow";
+import { WeekStrip } from "./WeekStrip";
 import { EmptyState } from "../components/EmptyState";
 import { isScheduledFromToday, localDateKey, type Task } from "../lib/tasks";
 
@@ -31,6 +32,7 @@ export function Calendar() {
   const { data: tasks, isLoading, isError } = useTasks();
   const { toggle } = useTaskActions();
   const now = useMinuteNow();
+  const [selected, setSelected] = useState<string | null>(null); // wybrany dzień z paska tygodnia
 
   // Filtruj do zaplanowanych od dziś, posortuj rosnąco po terminie, pogrupuj po dacie lokalnej.
   const groups = useMemo(() => {
@@ -49,6 +51,12 @@ export function Calendar() {
     return [...byDay.entries()];
   }, [tasks]);
 
+  // Dni z co najmniej jednym zadaniem (do kropek na pasku) = klucze grup agendy.
+  const busyDays = useMemo(() => new Set(groups.map(([key]) => key)), [groups]);
+
+  // Po wyborze dnia zawężamy agendę tylko do niego; bez wyboru pokazujemy wszystko.
+  const shown = selected ? groups.filter(([key]) => key === selected) : groups;
+
   return (
     <div className="space-y-5">
       <div className="pt-1">
@@ -56,18 +64,35 @@ export function Calendar() {
         <h2 className="mt-1 font-display text-[23px] font-semibold tracking-[-0.02em] text-ink">Kalendarz</h2>
       </div>
 
+      <WeekStrip busyDays={busyDays} selected={selected} onSelect={setSelected} />
+
+      {selected && (
+        <button
+          type="button"
+          onClick={() => setSelected(null)}
+          className="flex items-center gap-1.5 rounded-full border border-card-border bg-white/[0.05] px-3 py-1.5 text-xs font-semibold text-muted transition-colors hover:text-ink"
+        >
+          <X size={13} strokeWidth={2.5} />
+          Pokaż wszystkie
+        </button>
+      )}
+
       {isLoading && <p className="text-sm text-faint">Wczytuję…</p>}
       {isError && <p className="text-sm text-alarm-text">Błąd wczytywania zadań.</p>}
 
-      {!isLoading && !isError && groups.length === 0 && (
+      {!isLoading && !isError && shown.length === 0 && (
         <EmptyState
           icon={CalendarDays}
-          title="Nic w planach"
-          description="Brak nadchodzących zadań z terminem. Dodaj zadanie z datą w „Zadania”, a pojawi się tutaj."
+          title={selected ? "Nic w tym dniu" : "Nic w planach"}
+          description={
+            selected
+              ? "W wybranym dniu nie masz zaplanowanych zadań. Wybierz inny dzień lub pokaż wszystkie."
+              : "Brak nadchodzących zadań z terminem. Dodaj zadanie z datą w „Zadania”, a pojawi się tutaj."
+          }
         />
       )}
 
-      {groups.map(([key, dayTasks]) => (
+      {shown.map(([key, dayTasks]) => (
         <section key={key} className="space-y-2.5">
           <h3 className="text-[13px] font-bold text-subtle">{dayHeading(key)}</h3>
           <ul className="space-y-2.5">

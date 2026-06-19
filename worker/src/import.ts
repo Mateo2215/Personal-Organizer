@@ -19,7 +19,7 @@ export interface ImportIdea {
   id: number;
   content: string;
   project_id: number | null;
-  priority: 1 | 2 | 3;
+  priority: 0 | 1 | 2 | 3;
   created_at: string;
 }
 
@@ -161,9 +161,11 @@ function parseIdea(value: unknown, index: number, legacy: boolean): ImportIdea {
     fail(`ideas[${index}].project_id must be null or a positive integer`);
   }
 
-  const priority = row.priority === undefined && legacy ? 1 : row.priority;
-  if (priority !== 1 && priority !== 2 && priority !== 3) {
-    fail(`ideas[${index}].priority must be 1, 2 or 3`);
+  // Starsze kopie bez pola priority pochodzą sprzed priorytetów — traktujemy je jako „bez" (0),
+  // spójnie z migracją danych (nieoznaczone pomysły = 0), nie jako stary domyślny niski.
+  const priority = row.priority === undefined && legacy ? 0 : row.priority;
+  if (priority !== 0 && priority !== 1 && priority !== 2 && priority !== 3) {
+    fail(`ideas[${index}].priority must be 0, 1, 2 or 3`);
   }
 
   return {

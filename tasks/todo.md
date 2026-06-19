@@ -275,6 +275,40 @@ z userem. Filtr nadrzędny bez zmian: codzienny użytek > liczba funkcji, $0, iz
 - [ ] v2 #12 — Cloudflare Access (login Google) jako osobna strona.
 - [ ] v2 #13 — Wariant „AI w narzędziu" (łamie $0 — wymaga osobnej decyzji).
 
+## Sesja 15 — 3 usprawnienia z użycia (2026-06-19) — ZAIMPLEMENTOWANE + ZWERYFIKOWANE LOKALNIE
+Trzy zmiany z realnego użycia. Scope ustalony pytaniami przed kodem. Build (tsc+vite+PWA) + ESLint +
+worker 26/26 + web 14/14 = czyste. Niezacommitowane. Kolejność dowozu: NAJPIERW UPDATE w D1, potem push.
+
+### ① Priorytety pomysłów — 4 stany + recolor
+Nowy stan „bez" (0, domyślny) + przesunięte kolory: bez=szary, niski=**żółty**, średni=**pomarańczowy**, wysoki=czerwony.
+Schemat D1 bez zmian (kolumna `priority` to zwykły INTEGER; aplikacja zawsze podaje wartość). Migracja TYLKO danych.
+- [x] `index.css`: token `--color-prio-low` (#f5c563 żółty) + `--color-prio-med` zmieniony na #ff9f45 (pomarańczowy).
+- [x] `lib/ideas.ts`: `IdeaPriority = 0|1|2|3`, `DEFAULT_PRIORITY = 0`, 4 poziomy w `PRIORITIES` (recolor).
+- [x] `worker/src/index.ts`: `clampPriority` przyjmuje 0|1|2|3, fallback 0.
+- [x] `worker/src/import.ts`: walidacja dopuszcza 0; starsze kopie bez `priority` → 0 (nie 1). Testy zaktualizowane.
+- [x] `PriorityPicker.tsx`: 4 segmenty + `flex-wrap` (nie uciekają na wąskim ekranie).
+- [x] `IdeaItem.tsx`: stan „bez" nie reklamuje się — pokazuje samą datę (bez kropki/etykiety).
+- [x] Migracja `0005_idea_priority_none.sql` (`UPDATE ideas SET priority = 0 WHERE priority = 1`).
+- [ ] **P1 (USER, panel): UPDATE w D1 Console** (gołe, jedna linia) — stare nieoznaczone → „bez".
+- [ ] P1: push na `main` (po UPDATE) → auto-redeploy.
+- [ ] P1 (live, user): weryfikacja na telefonie (kolory + nowy domyślny „bez").
+
+### ② Rutyny — mocna separacja wizualna w „Zadania"
+Sekcja „Codzienne" w osobnym pojemniku (obwódka + lekko inne tło), nagłówek-banda z ikoną ↻ + podtytuł,
+composer rutyn odróżniony od composera zadań (płaskie pole + obrysowany lżejszy przycisk zamiast gradientu).
+Funkcje (dodaj/zmień/usuń/odhacz) bez zmian. Zero zmian D1.
+- [x] `Tasks.tsx`: restyle sekcji „Codzienne" (pojemnik, banda, composer).
+- [ ] P1: push na `main` → auto-redeploy (front-only).
+- [ ] P1 (live, user): weryfikacja na telefonie (czy rutyny już się nie mieszają z zadaniami).
+
+### ③ Kalendarz — kompaktowy pasek tygodnia
+Nad agendą pasek 7 dni (Pn–Nd): kropka na dniach z zadaniami, dziś podświetlone, strzałki ‹ › zmieniają tydzień,
+tap w dzień filtruje agendę do niego (+ „Pokaż wszystkie"). Front-only, czyta istniejące `GET /api/tasks`, zero zmian D1.
+- [x] Nowy `features/WeekStrip.tsx` (prezentacyjny: busyDays + selected + onSelect).
+- [x] `Calendar.tsx`: stan wybranego dnia, `busyDays` z grup, filtr agendy, chip „Pokaż wszystkie", empty state per dzień.
+- [ ] P1: push na `main` → auto-redeploy (front-only).
+- [ ] P1 (live, user): weryfikacja na telefonie (czytelność paska, kropki, nawigacja tygodni).
+
 ## Notatki
 - Najpierw Faza 1 (push end-to-end). Ryzyko nr 1: wysyłka Web Push z Workera — udowodnić w spike'u, zanim zbudujemy resztę.
 - $0: Cron co minutę = 1440/dobę << 100k limit Workers; D1/Pages z dużym zapasem; nigdy plan z kartą (fail-closed).

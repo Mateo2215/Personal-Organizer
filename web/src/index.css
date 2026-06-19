@@ -27,8 +27,9 @@
   --color-accent-from: #9a86ff;
   --color-accent-to: #b06bff;
 
-  /* Priorytet pomysłów (żółty = średni; niski = neutralny, wysoki reużywa alarm) */
-  --color-prio-med: #f5c563;
+  /* Priorytet pomysłów: bez = neutralny (faint), niski = żółty, średni = pomarańczowy, wysoki = alarm (czerwony) */
+  --color-prio-low: #f5c563;
+  --color-prio-med: #ff9f45;
 
   /* Alarm / zaległe */
   --color-alarm: #ff6f8e;

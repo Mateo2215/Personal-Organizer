@@ -1,4 +1,4 @@
-// Wybór priorytetu pomysłu: trzy segmenty (niski/średni/wysoki) z kolorową kropką.
+// Wybór priorytetu pomysłu: cztery segmenty (bez/niski/średni/wysoki) z kolorową kropką.
 // Współdzielony przez przechwyt (IdeaCapture) i edycję (IdeaItem).
 
 import { PRIORITIES, type IdeaPriority } from "../lib/ideas";
@@ -11,7 +11,7 @@ export function PriorityPicker({
   onChange: (p: IdeaPriority) => void;
 }) {
   return (
-    <div role="radiogroup" aria-label="Priorytet" className="flex gap-1.5">
+    <div role="radiogroup" aria-label="Priorytet" className="flex flex-wrap gap-1.5">
       {PRIORITIES.map((p) => {
         const active = p.value === value;
         return (

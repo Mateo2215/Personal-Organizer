@@ -230,8 +230,8 @@ app.get("/api/ideas", async (c) => {
   return c.json(res.results ?? []);
 });
 
-// Priorytet pomysłu: 1 (niski) | 2 (średni) | 3 (wysoki). Cokolwiek poza tym → 1.
-const clampPriority = (v: unknown): number => (v === 2 || v === 3 ? v : 1);
+// Priorytet pomysłu: 0 (bez) | 1 (niski) | 2 (średni) | 3 (wysoki). Cokolwiek poza tym → 0.
+const clampPriority = (v: unknown): number => (v === 1 || v === 2 || v === 3 ? v : 0);
 
 // Czy projekt o danym id istnieje? Strzeże przed osieroconym (niewidocznym) pomysłem z nieznanym project_id.
 async function projectExists(db: D1Database, id: number): Promise<boolean> {
