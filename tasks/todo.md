@@ -334,6 +334,16 @@ zaparkowane w v2 #10 (projekty/tagi jako moduł dla zadań). Drzwi otwarte: gdy 
 („świat tylko dziś bez historii"). Staty „stanowe" w ~80% pokrywa pierścień. Drzwi otwarte dopiero po decyzji
 o zbieraniu historii (osobna tabela logu).
 
+## Sesja 17 — przełącznik trybu „Zadania | Codzienne" (2026-06-20) — DOWIEZIONE I POTWIERDZONE NA TELEFONIE ✅
+Tarcie z użycia: dodawanie rutyn zlewało się z dodawaniem zadań mimo kosmetycznej separacji z sesji 15.
+Źródło = dwa bliźniacze composery „wpisz + Dodaj" na jednym ekranie. Fix strukturalny (opcja A z 3 wariantów).
+- [x] `web/src/features/Tasks.tsx`: stan `mode: "tasks" | "routines"` + segmentowany przełącznik na górze
+      (gradient na aktywnym, licznik rutyn przy „Codzienne"); naraz jeden composer + jedna lista; filtry tylko w „Zadania".
+- [x] Usunięta dolna sekcja „Codzienne" (treść przeniesiona do trybu). Tryb startuje na „Zadania", nie zapamiętywany.
+- [x] Front-only, zero D1/cron/push. Build (tsc+vite+PWA) + ESLint czyste.
+- [x] Push na `main`: `0e9119d` (higiena docs) + `3759647` (przełącznik), `2d1a8d3..3759647` → auto-redeploy.
+- [x] User potwierdził na telefonie: mieszanie zniknęło. Otwarte pytanie o separację rutyn (sesja 15) ZAMKNIĘTE.
+
 ## Notatki
 - Najpierw Faza 1 (push end-to-end). Ryzyko nr 1: wysyłka Web Push z Workera — udowodnić w spike'u, zanim zbudujemy resztę.
 - $0: Cron co minutę = 1440/dobę << 100k limit Workers; D1/Pages z dużym zapasem; nigdy plan z kartą (fail-closed).
