@@ -322,7 +322,7 @@ zostają widoczne pod kartą.
 - [x] `features/Today.tsx`: flaga `dayComplete`, render karty z **pierwszeństwem przed `isEmpty`** (fix pułapki
       „same zadania, wszystko zrobione" → wcześniej zlewało się z pustym dniem), lista rutyn ukryta gdy dzień zaliczony.
 - [x] Build (tsc+vite+PWA) + ESLint czyste.
-- [ ] P1: push na `main` → Workers Builds auto-redeploy (front-only, bez migracji — bezpieczne). Czeka na zgodę usera.
+- [x] P1: push na `main` (commit `4e7c973`, `09b415b..2d1a8d3`) → Workers Builds auto-redeploy wyzwolony.
 - [ ] P1 (live, user): odhacz cały dzień → karta zamiast list; sprawdź też wariant z zaległymi pod kartą.
 
 ### ② Tagi dla zadań — ODRZUCONE (2026-06-19)

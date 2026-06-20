@@ -156,3 +156,15 @@ kod podaje wartość jawnie. Jeśli nie ma CHECK i wartość zawsze jest podawan
 **UPDATE remapujący istniejące wiersze** (gdy zmiana znaczeń/kolorów dotyka starych danych). Pamiętaj o spójności na
 brzegach: walidacja API (`clampPriority`) i parser importu muszą dopuścić nową wartość — import też zmapuj (legacy bez
 pola → nowy domyślny).
+
+## 2026-06-19 — Stan „skończone" musi mieć pierwszeństwo przed stanem „pusto"
+**Co:** Dodając ekran gratulacji na „Dziś" (`DayComplete`) okazało się, że gdy masz tylko zadania z terminem (bez rutyn)
+i odhaczysz wszystkie, listy w widoku robią się puste → `isEmpty` zapala stan „Czysto na dziś" (komunikat od *pustego*
+dnia). Czyli „skończyłem wszystko" było nieodróżnialne od „nic nie było zaplanowane". Fix: warunek sukcesu liczony
+z **liczników** (`dayTotal > 0 && dayDoneTotal === dayTotal`) renderowany PRZED gałęzią `isEmpty` (`isEmpty && !dayComplete`).
+**Dlaczego ważne:** „Pusto" zwykle wyprowadza się z *długości list* (`items.length === 0`), a „skończone" z *liczników
+zrobione/wszystkie*. Te dwa stany **zbiegają się**, bo ukończenie opróżnia listy (przefiltrowane `status==="open"`
+znika). Bez jawnego pierwszeństwa sukces wpada w „pusto" i znika nagroda.
+**Jak stosować:** W każdym widoku listy z odhaczaniem rozróżniaj „nic nie było" (total === 0) od „wszystko zrobione"
+(total > 0 && done === total). Renderuj/sprawdzaj stan ukończenia przed stanem pustym. Stan sukcesu wiąż z licznikami,
+nie z `list.length`, bo lista po ukończeniu i tak będzie pusta.
