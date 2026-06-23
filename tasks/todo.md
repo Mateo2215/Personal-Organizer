@@ -344,6 +344,21 @@ Tarcie z użycia: dodawanie rutyn zlewało się z dodawaniem zadań mimo kosmety
 - [x] Push na `main`: `0e9119d` (higiena docs) + `3759647` (przełącznik), `2d1a8d3..3759647` → auto-redeploy.
 - [x] User potwierdził na telefonie: mieszanie zniknęło. Otwarte pytanie o separację rutyn (sesja 15) ZAMKNIĘTE.
 
+## Sesja 18 — fix laga startowego danych (2026-06-23) — ZAIMPLEMENTOWANE I ZWERYFIKOWANE LOKALNIE, do dowozu
+Tarcie z użycia: po dłuższej przerwie apka wstaje od razu, ale zadania/pomysły doczytują się ~30 s.
+Diagnoza: backend trywialny (SELECT * na maleńkich tabelach) → nie baza. Przyczyny po stronie klienta:
+(1) po ubiciu apki przez Androida cache TanStack (RAM) pusty → trzeba pobrać wszystko z sieci, zanim coś widać;
+(2) `fetch` bez timeoutu → pierwsze żądanie na śpiącym radiu telefonu wisi ~20–30 s. Fix front-only, zero D1/cron/push.
+- [x] `main.tsx`: `PersistQueryClientProvider` + `createSyncStoragePersister(localStorage)` (klucz `po-query-cache`,
+      `maxAge`/`gcTime` = 7 dni, `buster='1'`) → dane od razu po otwarciu (stale-while-revalidate); `staleTime` 1 min, `retry` 2.
+- [x] `api.ts`: timeout 10 s na `fetch` (`AbortSignal.timeout` + `AbortSignal.any` z sygnałem wołającego) → szybkie ponowienie zamiast zawisu.
+- [x] Paczki: `@tanstack/react-query-persist-client` + `@tanstack/query-sync-storage-persister` @5.101.1
+      (zweryfikowane: ten sam wydawca/wersja co react-query, zero obcych zależności przechodnich).
+- [x] Weryfikacja lokalna: build (tsc+vite+PWA) + ESLint + testy 14/14 — czyste.
+- [ ] P1: push na `main` → Workers Builds auto-redeploy (front-only, bez migracji D1).
+- [ ] P1 (live, user): po dłuższej przerwie otworzyć apkę → zadania/pomysły widoczne od razu (z pamięci),
+      świeże dociągają w tle w kilka s, nie w 30.
+
 ## Notatki
 - Najpierw Faza 1 (push end-to-end). Ryzyko nr 1: wysyłka Web Push z Workera — udowodnić w spike'u, zanim zbudujemy resztę.
 - $0: Cron co minutę = 1440/dobę << 100k limit Workers; D1/Pages z dużym zapasem; nigdy plan z kartą (fail-closed).

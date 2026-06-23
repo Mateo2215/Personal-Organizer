@@ -168,3 +168,18 @@ znika). Bez jawnego pierwszeństwa sukces wpada w „pusto" i znika nagroda.
 **Jak stosować:** W każdym widoku listy z odhaczaniem rozróżniaj „nic nie było" (total === 0) od „wszystko zrobione"
 (total > 0 && done === total). Renderuj/sprawdzaj stan ukończenia przed stanem pustym. Stan sukcesu wiąż z licznikami,
 nie z `list.length`, bo lista po ukończeniu i tak będzie pusta.
+
+## 2026-06-23 — PWA: dane znikają po ubiciu apki → persist cache + timeout fetch
+**Co:** User zgłosił ~30 s laga przy starcie — apka wstaje od razu, ale zadania/pomysły doczytują się dopiero
+po chwili, „po dłuższej przerwie". Diagnoza: backend trywialny (`SELECT * FROM tasks/ideas` na maleńkich tabelach),
+więc to NIE baza. Dwie przyczyny po stronie klienta: (1) po ubiciu procesu przez Androida pamięć TanStack Query
+(RAM) jest pusta → apka musi POBRAĆ wszystko z sieci, zanim cokolwiek pokaże; (2) `fetch` w `api.ts` bez timeoutu
+→ pierwsze żądanie na wybudzającym się radiu telefonu wisi ~20–30 s, bez szansy na ponowienie.
+**Dlaczego ważne:** „Lag startowy" w PWA prawie nigdy nie jest winą backendu — to zimna ścieżka sieć + pusty cache
+po restarcie. Spinner widać, bo nie ma czego pokazać z pamięci, a żądanie utyka bez limitu czasu.
+**Jak stosować:** (a) Persistuj cache zapytań do `localStorage` (`@tanstack/react-query-persist-client` +
+`createSyncStoragePersister`) z `gcTime >= maxAge` — wtedy po otwarciu dane są NATYCHMIAST (stale-while-revalidate).
+(b) Każdy `fetch` z limitem czasu (`AbortSignal.timeout(10s)` + `AbortSignal.any` z sygnałem wołającego) i `retry`
+w QueryClient — zawieszone żądanie pada szybko i ponawia się na wybudzonym łączu. Front-only, zero D1/cron/push.
+**Bezpieczeństwo paczek:** persist-client/sync-storage-persister to ten sam wydawca (tannerlinsley) i wersja
+co `@tanstack/react-query`, zależności przechodnie tylko z rodziny `@tanstack/query-*` — zero obcych paczek.
