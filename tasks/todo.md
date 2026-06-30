@@ -1,366 +1,50 @@
 # Personal Organizer — Todo
 
+> Historia dowiezionego (Fazy 0–5, redesign Aurora, dogfooding, sesje 15–18, code review):
+> [todo-archive.md](todo-archive.md). Tu trzymamy tylko **otwarte pozycje**. Pełne decyzje:
+> `../../ai-os/projects/personal-organizer/decisions.md`.
+
 ## Current State
-**WDROŻONE NA PRODUKCJĘ I DZIAŁA (2026-06-17).** Apka żyje na Cloudflare (jeden Worker serwuje front+API+cron),
-zdeployowana przez **Workers Builds podpięte do GitHuba** (build w chmurze CF, bez lokalnego wranglera — omija antywirusa).
-**Push POTWIERDZONY na realnym Androidzie przy ZAMKNIĘTEJ apce** (user, 2026-06-17): powiadomienie przyszło
-punktualnie (~1 min po terminie, czyli cykl crona). PWA zainstalowana na ekranie głównym. Strefa czasowa zweryfikowana
-(lokalny→UTC poprawne). Rdzeń v1 (Fazy 0–3) + dowóz (Faza 4) = kompletne i używalne.
-**Redesign „Aurora" + 6 poprawek z dogfoodingu — zweryfikowane na telefonie przez usera (2026-06-17).**
-**Rutyny (zadania codzienne) POTWIERDZONE NA ŻYWO przez usera (2026-06-18)** → rdzeń v1 zamknięty w całości,
-luka „używane codziennie" domknięta. Apka jest w realnym codziennym użyciu. Dalszy rozwój = nowe funkcje
-self-extend wg mapy drogowej niżej („Mapa drogowa — po v1"), nie kosmetyka.
-Stack: Cloudflare Workers (Hono) + D1 + Cron + Web Push + Workers Static Assets; front React+Vite+TS, Tailwind, TanStack Query.
-Auth = token aplikacyjny (NIE Cloudflare Access). Repo: GitHub `Mateo2215/Personal-Organizer`, gałąź `main` (push→auto-redeploy).
-UWAGA środowisko (dot. tylko LOKALNEGO dev): npm/wrangler wymaga `NODE_OPTIONS=--use-system-ca` (Avast+Norton przechwytują HTTPS).
-Deploy NIE używa już lokalnego toolchainu. Pełne decyzje: `../../ai-os/projects/personal-organizer/decisions.md`.
+**RDZEŃ v1 ZAMKNIĘTY. Apka WDROŻONA, ŻYWA, w REALNYM CODZIENNYM UŻYCIU.** Jeden Cloudflare Worker (Hono)
+serwuje front + API + cron (Workers Static Assets); deploy przez Workers Builds podpięte do GitHuba
+(push na `main` → build i redeploy w chmurze CF, bez lokalnego wranglera). Limity $0 potwierdzone
+(plan Free, brak karty, fail-closed). Push przy zamkniętej apce i po długim doze potwierdzony.
 
-## PRIORITY — Stabilizacja po code review (2026-06-18)
+Stack: Cloudflare Workers (Hono) + D1 + Cron + Web Push + Workers Static Assets;
+front React + Vite + TS, Tailwind, TanStack Query (cache persist do `localStorage`).
+Auth = token aplikacyjny Bearer (NIE Cloudflare Access). Repo: GitHub `Mateo2215/Personal-Organizer`, gałąź `main`.
 
-Pełny raport: `tasks/priority-code-review-2026-06-18.md`.
+**Repo czyste i zsynchronizowane z `origin/main`** (ostatni commit pracy: sesja 18, `9fa06fb`).
+Cała mapa drogowa P1/P2/P3 dowieziona i potwierdzona na żywo (m.in. lag startowy i ekran gratulacji
+potwierdzone przez usera 2026-06-30). Świadomie skreślone: pomysł→zadanie (#4), sekcja „Bez terminu" (#7),
+tagi i statystyki (łamią linie cięcia v1).
 
-- [x] **P1: Nie ustawiaj `reminded_at`, jeśli żaden push nie został przyjęty (2xx).** ✓ 2026-06-18
-- [x] **P1: Weryfikuj i naprawiaj realną subskrypcję push, nie tylko zgodę `Notification.permission`.** ✓ 2026-06-18
-- [x] P1: Dodaj testy regresyjne dla obu ścieżek push. ✓ 2026-06-18 (10+5 testów Vitest)
-- [x] P2: Odrzucaj nieistniejący `project_id` przy zapisie pomysłu. ✓ 2026-06-18 (helper `projectExists` w POST+PATCH `/api/ideas` → 400 „project not found")
-- [x] P2: Dodaj potwierdzenie lub Undo przed usunięciem zadania, pomysłu i rutyny. ✓ 2026-06-18 (wspólny `ConfirmDeleteButton` — inline dwukrok „Usunąć? Tak · Nie", auto-anulowanie po 3,5 s; w TaskRow/IdeaItem/RoutineRow)
-- [x] P3: Dodaj bezpieczny fallback dla powrotu z `/settings`. ✓ 2026-06-18 (`navigate(-1)` → `navigate("/")` w `Layout.tsx`)
-- [x] P3: Usuń ostrzeżenie CSS z komentarza w `web/src/index.css`. ✓ 2026-06-18 (usunięta sekwencja `*/` z treści komentarza; build bez ostrzeżenia parsera)
-- [x] P3: Po osobnym potwierdzeniu zaktualizuj nieaktualny opis auth w `CLAUDE.md`. ✓ 2026-06-18 (Cloudflare Access → token Bearer, za zgodą usera)
+**Faza bieżąca:** „używaj i zbieraj tarcie" — NIE budować z góry; kolejna funkcja dopiero, gdy realne
+użycie wskaże konkretny ból. Otwarte pytania do oceny w użyciu żyją w `state.md` (Open questions), nie tu.
 
-**Bramka:** wdrożenie kalendarza zaczyna się po zamknięciu dwóch punktów P1 i ich testów. ✓ Spełniona (sesja 9). Sesja 10 domknęła pozostałe P2/P3 (poza opisem auth w `CLAUDE.md`).
+⚠️ Środowisko (tylko LOKALNY dev): npm/wrangler wymaga `NODE_OPTIONS=--use-system-ca` (Avast+Norton przechwytują HTTPS).
+Deploy NIE używa lokalnego toolchainu. Migrację D1 zakładaj PRZED pushem (push = natychmiastowy auto-redeploy na prod).
 
-## Model danych (D1)
-- `projects` (id, name, created_at)
-- `tasks` (id, content, due_at UTC nullable, has_time, status open|done, reminded_at, created_at, updated_at) — bez projektu w v1
-- `ideas` (id, content, project_id nullable→Ogólne, priority 1|2|3 default 1, created_at)
-- `push_subscriptions` (id, endpoint UNIQUE, p256dh, auth, created_at)
+## Otwarte pozycje
 
-## Plan v1 — fazy
+### Weryfikacje na telefonie (klik usera — kod nie wykona)
+- [ ] **P3: Deliberowany test restore** (import #5) — eksport → dodaj rekord tymczasowy → „Odtwórz z kopii"
+      → rekord znika, wcześniejsze dane zgodne. Niski priorytet (kod 20/20 + smoke + zdrowy deploy);
+      przy okazji ocenić czytelność auto-eksportu przed nadpisaniem.
 
-### Faza 0 — Fundament ✅
-- [x] `git init` + `.gitignore`
-- [x] Scaffold `web/` (Vite + React + TS) + Tailwind/router/TanStack Query
-- [x] Scaffold `worker/` (Hono + `wrangler.toml`, binding D1) + cron co minutę
-- [x] Migracja D1 ze schematem (lokalnie)
-- [x] `APP_TOKEN` + middleware auth + ekran „klucza dostępu" + klient API
-- [x] Lokalny dev wstaje (`vite` build OK + `wrangler dev` + /api/health 401/200)
-
-### Faza 1 — Pionowe przebicie: zadanie → cron → push (KRYTYCZNE)
-- [x] **Spike** — Web Push z Workera działa: `@block65/webcrypto-web-push`, status 201 z FCM (lokalnie, mimo AV)
-- [x] VAPID — klucze wygenerowane; prywatny w `.dev.vars` (sekret), publiczny przez `GET /api/config`
-- [x] Endpointy `GET/POST/PATCH/DELETE /api/tasks`, `POST /api/subscribe`, `GET /api/config`, dev `POST /api/_dev/test-push`
-- [x] Handler `scheduled` + Cron co minutę (wybór zadań „do przypomnienia teraz", `reminded_at`)
-- [x] Front — formularz zadania (data+godzina), zgoda na push, subskrypcja, SW (`injectManifest`), TanStack Query
-- [x] P1: Deploy + test push na realnym Androidzie (zamknięta apka, punktualność) — ZREALIZOWANE inną ścieżką (Workers Builds + GitHub, nie Pages+Worker). Patrz Blok C poniżej. Checkbox zaszłościowy.
-- [x] P1: Test cronu — push przyszedł ~1 min po terminie = potwierdzony cykl crona na produkcji (Blok C). Checkbox zaszłościowy.
-- [x] P1: Obejście optymalizacji baterii (instrukcja + weryfikacja) — push po długim idle/doze działa,
-      potwierdzone przez usera 2026-06-19 (szczegóły: C4 poniżej).
-
-### Faza 2 — Zadania w pełni (głównie zrobione)
-- [x] Dolna nawigacja (Dziś / Zadania / Pomysły) + Layout + react-router
-- [x] Zakładka „Zadania" (lista + formularz) + usuwanie + toggle „zrobione"
-- [x] Wyróżnienie zaległych (czerwone)
-- [x] Widok „Dziś" (dzisiejsze + zaległe + szybki guzik pomysłu) + włączanie powiadomień
-- [x] P2: Edycja treści/terminu zadania w UI (ołówek → inline form w TaskRow; mutacja `update` w useTaskActions; build OK)
-- [x] P3: Zadania bez terminu (due_at null) — zostają tylko w „Zadania", „Dziś" pozostaje skupione
-      (dziś+zaległe). Sekcja „Bez terminu" w „Dziś" została ostatecznie odrzucona 2026-06-19 jako nieużyteczna.
-
-### Faza 3 — Pomysły + projekty ✅ (backend smoke-tested; UI do klika na żywo)
-- [x] P2: Projekty CRUD (dodaj/zmień nazwę/usuń → pomysły do Skrzynki). Backend: GET/POST/PATCH/DELETE /api/projects; DELETE atomowo przez DB.batch przenosi pomysły do Skrzynki. Smoke test OK (project_id→null po usunięciu).
-- [x] P2: Przechwyt pomysłu (treść + wybór projektu z listy / nowy w locie). IdeaCapture.tsx + POST /api/ideas.
-- [x] P2: Edycja pomysłu (treść + przeniesienie do innego projektu/Skrzynki). IdeaItem.tsx (tryb edycji) + PATCH /api/ideas/:id. Smoke test OK (zmiana treści + move A→B, pusta treść→400).
-- [x] P2: Lista pomysłów pogrupowana po projektach + Skrzynka. Ideas.tsx (grupowanie) + ProjectGroup.tsx (nagłówek z rename/delete + wiersze). useIdeasData.ts (queries+mutacje).
-
-### Faza 4 — Wykończenie + dowóz
-Architektura deployu: **jeden Worker serwuje front + API** (Workers Static Assets) — ten sam origin, zero CORS,
-względne `/api/*` działają bez zmian, jeden deploy. (decyzja 2026-06-16, patrz decisions.md.)
-
-**Blok A — lokalnie (bez konta CF):**
-- [x] A1 P1: Manifest PWA + podpięcie ikon. `manifest.icons` w `vite.config.ts` (192/512/512-maskable),
-      `index.html` (`lang="pl"`, tytuł, `theme-color`, apple-touch-icon). **Ikony powstają w Claude Design** —
-      kod referuje ścieżki w `web/public/`, spec w `web/public/ICONS.md`; pliki PNG wrzucimy gdy gotowe. Build OK.
-- [x] A2 P1: Single-Worker static assets. `[assets]` w `wrangler.toml` (`directory="../web/dist"`,
-      `not_found_handling="single-page-application"`, `run_worker_first=["/api/*"]`). `predeploy` buduje front.
-      Zweryfikowane `wrangler deploy --dry-run`: 10 plików z dist, binding D1 OK, config waliduje się.
-- [x] A3 P2: Eksport danych. Worker `GET /api/export` → JSON `{tasks, ideas, projects}` (bez subskrypcji).
-      Front: `lib/export.ts` + guzik „Eksportuj" w `Layout.tsx` (header). Build tsc+vite OK.
-- [~] A4 P2: Przejście designem — W TOKU (2026-06-17). Realizowane jako **redesign „Aurora"** wg handoffów
-      w `design/` (NIE commitujemy tego folderu — dodany do `.gitignore`). Rozpiska niżej: „Redesign Aurora — fazy".
-- [x] A5 P1: Checklista komend Bloku B — `personal-organizer/DEPLOY.md`.
-
-**Blok B — deploy przez GitHub + panel Cloudflare (ZMIANA 2026-06-17: bez terminala/wranglera lokalnie).**
-Powód: antywirus (Avast+Norton, skanowanie HTTPS) psuje lokalny npm/wrangler; build w chmurze CF omija problem.
-Build w CI: skrypt `worker` `ci:build` (instaluje front+worker, buduje front), deploy `npx wrangler deploy`. Szczegóły: `DEPLOY.md`.
-- [x] B1: Kod na GitHubie (`main`, `Mateo2215/Personal-Organizer`) — prep CI wypchnięty.
-- [x] B2 (USER, panel): D1 `personal-organizer` utworzona, Database ID w `wrangler.toml`.
-- [x] B3: Database ID wpisany i wypchnięty (commit b9dee7d).
-- [x] B4 (USER, panel): schemat założony przez D1 Console (4 tabele potwierdzone `/tables`).
-- [x] B5 (USER, panel): Workers Builds podłączony (root `worker`, build `npm run ci:build`, deploy `npx wrangler deploy`, branch `main`). Build success.
-- [x] B6 (USER, panel): sekrety wgrane (APP_TOKEN + 3× VAPID). Apka odpowiada na produkcji (user: „działa").
-
-**Blok C — weryfikacja na Androidzie (wspólnie):**
-- [x] C1 P1: PWA zainstalowana na ekranie głównym, logowanie tokenem działa.
-- [x] C2 P1: Powiadomienia włączone (zgoda dana, 2 subskrypcje zapisane w D1).
-- [x] C3 P1: Push PRZYSZEDŁ przy zamkniętej apce, punktualnie (~1 min = cykl crona). Strefa OK (13:49 UTC = 15:49 PL).
-- [x] C4 P2: Push po długim idle/doze — POTWIERDZONY przez usera 2026-06-19. Powiadomienie dochodzi także
-      po wielogodzinnym uśpieniu telefonu; nie wymaga dodatkowego obejścia w aplikacji.
-- [x] C5 P1: Kontrola limitów $0 w dashboardzie — POTWIERDZONE 2026-06-17. Plan Workers Free, BRAK karty (fail-closed OK).
-      ~360 requests/~6h (cron co minutę + wejścia usera) = <0,5% progu 100k/dobę. Cron „every minute" działa. Ogromny zapas.
-      Uwaga: mapa „Request Distribution" pokazuje też region Indie — to cron (wewnętrzna infra CF, nieprzypisana lokalnie)
-      i/lub szum botów na publiczny URL; nieszkodliwe (całe /api/* za tokenem → 401 bez niego, front bez sekretów).
-
-**Drobny dług / robustness:**
-- [x] P3: `Today.tsx onEnablePush` owinięty w try/catch — przy błędzie (np. `/api/config`) UI nie utyka na „Włączam…",
-      pokazuje komunikat błędu. Zweryfikowane w kodzie 2026-06-17 (`Today.tsx:30-39`). Domknięte przy redesignie Aurora.
-
-## Redesign Aurora — fazy (A4, w toku od 2026-06-17)
-Kierunek „Aurora": ciemny `#0b0a12`, fioletowy gradient akcentu (`#9a86ff`→`#b06bff`), glassmorphism,
-fonty Space Grotesk + Manrope, ikony lucide-react, logo „Postęp" (pierścień + check). Źródło prawdy:
-handoffy w `design/` (`dashboard/README.md`, `logo/README.md` + prototypy `.dc.html`). Redesign czysto
-wizualny — model danych i logika bez zmian (wyjątek: funkcjonalne filtry w Fazie 6, świadomie dodane).
-
-**Decyzje sesji (2026-06-17):** stopka logowania = USUNĄĆ (Cloudflare Access było tylko w specu, sprzeczne z auth tokenem);
-filtry Zadań = WDROŻYĆ funkcjonalnie; tryb pracy = fazami z potwierdzeniem. Drobne niespójności specu
-rozstrzygane „handoff/prototyp logo = źródło prawdy" (logo 66px/radius21, gradient przycisków `#b06bff`, znak = „Postęp" nie gwiazdka).
-
-- [x] Faza 0: `design/` → `.gitignore` (nie commitujemy); plan w todo.
-- [x] Faza 1: Fundament — instalacja `@fontsource/space-grotesk`+`@fontsource/manrope`+`lucide-react`;
-      tokeny Aurora w `index.css` przez `@theme`; tło+poświata+fonty na `body`; usunięty martwy `App.css`;
-      komponent `Logo.tsx` (`LogoMark` + `AppIcon`). Build OK.
-- [x] Faza 2: Shell — `BottomNav.tsx` (ikony Lucide, blur, safe-area, kolory akcentu) + `Layout.tsx` (ikony eksport/wyloguj per-ekran tytuł Space Grotesk). Build OK.
-- [x] Faza 3: `AccessGate.tsx` — logo+poświata, glass pole z kłódką, gradient przycisk, BEZ stopki.
-- [x] Faza 4: `TaskRow.tsx` — okrągły custom checkbox (gradient dla done), karty glass zwykła/alarmowa, stany done/zaległe, ikony Lucide.
-- [x] Faza 5: `Today.tsx` — nagłówek dnia (data eyebrow + powitanie) + `ProgressRing.tsx` (SVG), sekcja zaległych z glow, przycisk „Dorzuć pomysł" (dashed).
-- [x] Faza 6: `Tasks.tsx` — composer w karcie (chip daty: styled label nad ukrytym datetime-local) + funkcjonalne chipy filtrów (Wszystkie/Dziś/Nadchodzące) + helper `isUpcoming` w `lib/tasks`.
-- [x] Faza 7: Pomysły — `IdeaCapture`/`IdeaItem` (natywny select ostylowany `appearance-none`+chevron — świadomie, zamiast custom dropdownu: dostępny i naturalny na Androidzie), `ProjectGroup` (licznik-pigułka, inbox), ikony Lucide.
-- [x] Faza 8: `EmptyState.tsx` (aura+tytuł+opis+akcje) w Dziś/Zadania/Pomysły; hover transitions na kartach; gradient tła. Build+lint czyste.
-- [x] Dług P3 domknięty przy okazji: `Today.onEnablePush` owinięty w try/catch (UI nie utyka na „Włączam…").
-- [x] Po redesignie: ikony PWA wygenerowane (192/512/maskable + apple-touch + favicon.svg) skryptem `web/scripts/generate-icons.mjs`
-      (sharp z worker/node_modules; geometria znaku wklejona, niezależna od `design/`). theme/bg color = `#0b0a12`. Build kopiuje do `dist`, manifest OK. Domyka „ikony niewgrane".
-- [ ] Otwarte do oceny w użyciu: wymiar logo (przyjęto 66px/radius21 z prototypu), gradient przycisków `#b06bff`.
-
-## Poprawki z dogfoodingu (2026-06-17, sesja 2) — WYPCHNIĘTE + ZWERYFIKOWANE NA TELEFONIE ✅
-Feedback właściciela po realnym użyciu redesignu „Aurora". Commit `fd9a54a` na `main` → auto-redeploy CF. Build+lint czyste.
-- [x] Pomysły: pusta Skrzynka znika (renderowana tylko gdy ma pomysły — `Ideas.tsx`). To systemowy kosz, nie projekt; pusty nie wisi.
-- [x] Pomysły: sekcja przechwytu się wyróżnia — nagłówek „NOWY POMYSŁ" + akcentowy kontur/poświata + pole w ramce, placeholder „Co chodzi Ci po głowie?" (`IdeaCapture.tsx`). Adresuje „nie widać gdzie dodać".
-- [x] Pomysły: formularz nowego projektu — pole full-width, `Anuluj`/`Dodaj` w osobnym rzędzie → „Anuluj" nie wychodzi poza ramkę.
-- [x] Zadania: dekoracyjna ikona „+" (czytana jako martwy przycisk) → `ListChecks` (`Tasks.tsx`).
-- [x] Nagłówek (cała apka): logo Aurora (`AppIcon`) przy „Personal Organizer" — wordmark przestał być smutnym szarym tekstem (`Layout.tsx`).
-- [x] Nagłówek: Eksport + Wyloguj przeniesione do menu (⋮) z panelem; dolny pasek został przy 3 widokach (`Layout.tsx`).
-
-## Faza 5 — Zadania codzienne (rutyny) — ZAIMPLEMENTOWANE (2026-06-17), do weryfikacji na żywo + deploy
-Brainstorm domknięty: świat „tylko dziś" bez historii, osobna tabela `routines`, reset przez porównanie daty
-(bez crona), jeden ekran „Dziś" (rutyny na górze, ↻), zarządzanie w „Zadania", bez push. Pełne decyzje:
-`../../ai-os/projects/personal-organizer/decisions.md` („2026-06-17 — Zadania codzienne (rutyny)").
-Cron/push NIE ruszane (świadoma izolacja). Build (tsc+vite+PWA) + ESLint + typecheck worker = czyste.
-
-- [x] P1: Migracja `worker/migrations/0002_routines.sql` (tabela `routines`: content, last_done_on, created_at).
-- [x] P1: Backend — endpointy `GET/POST/PATCH/DELETE /api/routines` (lustro wzorca tasks) + `routines` w `GET /api/export`.
-- [x] P1: Front model+akcje — `lib/routines.ts` (`todayLocalDate`/`isDoneToday`, data LOKALNA nie UTC) + `useRoutineActions.ts`.
-- [x] P1: `RoutineRow.tsx` (checkbox + ↻; tryb zarządzania = rename inline + usuń) + render na „Dziś" (góra, pierścień liczy rutyny+zadania, EmptyState gdy brak rutyn ORAZ zaległych ORAZ dzisiejszych).
-- [x] P2: Sekcja „Codzienne" w `Tasks.tsx` (composer + lista z rename/delete).
-- [x] P2: `routines` w `lib/export.ts` (ExportData).
-- [x] P1 (USER, panel): tabela `routines` założona w **D1 Console** (gołe DDL bez komentarzy — patrz lessons.md). Potwierdzone usera.
-- [x] P1: kod wypchnięty na `main` (2 commity: zaległa lekcja + funkcja rutyn, `fd9a54a..7f4b467`) → Workers Builds auto-redeploy wyzwolony.
-- [x] P1 (live): deploy na zielono + przejście UI na telefonie POTWIERDZONE przez usera (2026-06-18): rutyny działają.
-      Luka „używane codziennie" domknięta w całości — rdzeń v1 zamknięty.
-
-## Mapa drogowa — po v1 (finalne priorytety, ustalone 2026-06-18)
-Rdzeń v1 zamknięty (rutyny potwierdzone na żywo). Poniżej kolejne funkcje self-extend, uporządkowane wspólnie
-z userem. Filtr nadrzędny bez zmian: codzienny użytek > liczba funkcji, $0, izolacja crona/push, v1 chude.
-
-### P1 — Następne do zrobienia
-- [~] **P1 #1 — Pomysły 2.0: priorytety + „Ogólne"** — ZAIMPLEMENTOWANE LOKALNIE (2026-06-18), do dowozu.
-      Build (tsc+vite+PWA) + ESLint + typecheck workera = czyste. Decyzje startowe (do oceny na telefonie):
-      3 poziomy Niski(1)/Średni(2)/Wysoki(3), **domyślny = Niski** (świadomie — by nowy pomysł nie świecił od razu),
-      paleta szary/żółty/czerwony (token `--color-prio-med` + reużyty `alarm`), znacznik = **obwódka/poświata karty**
-      + dyskretna kropka w stopce wiersza.
-  - [x] Migracja `worker/migrations/0003_idea_priority.sql` (`ALTER TABLE ideas ADD COLUMN priority INTEGER NOT NULL DEFAULT 1`).
-  - [x] Backend: POST/PATCH `/api/ideas` przyjmują `priority` (clamp 1–3); GET/eksport płyną przez `SELECT *` (bez zmian).
-  - [x] Model: `lib/ideas.ts` — typ `IdeaPriority`, `DEFAULT_PRIORITY`, `PRIORITIES` (etykiety+klasy), `priorityMeta`.
-  - [x] Front: `PriorityPicker.tsx` (3 segmenty z kropką, wspólny), picker w `IdeaCapture` i `IdeaItem` (edycja).
-  - [x] Podgląd wiersza: obwódka/poświata wg wagi (`IdeaItem`) + kropka+etykieta w stopce.
-  - [x] Sortowanie wg wagi **wewnątrz** grup (`Ideas.tsx`, stabilny sort — kolejność „najnowsze pierwsze" zachowana).
-  - [x] Rename „Skrzynka" → „Ogólne": `ProjectGroup` (nagłówek + komunikat usuwania), `Ideas` (EmptyState), opcje selectów, komentarze.
-  - [x] **P1 #1a (USER, panel): migracja `0003` w D1 Console** — potwierdzona przez usera (2026-06-18).
-  - [x] **P1 #1b: push na `main`** (commit `fd30cad`, `7f4b467..fd30cad`) → Workers Builds auto-redeploy wyzwolony.
-  - [x] **P1 #1c (live): weryfikacja na telefonie** — potwierdzona przez usera (2026-06-18): działa.
-- [~] **P1 #2 — Ekran „Ustawienia" + personalizacja** — ZAIMPLEMENTOWANE LOKALNIE (2026-06-18), do dowozu.
-      Build + ESLint czyste. Decyzje: ikona koła zębatego w nagłówku **zastępuje** menu ⋮ (link do `/settings`),
-      na ekranie Ustawień zmienia się w strzałkę wstecz (`navigate(-1)`); dolny pasek zostaje przy 3 zakładkach;
-      imię zapisywane na bieżąco do `localStorage` (klucz `po_user_name`).
-  - [x] `lib/settings.ts` — `getName`/`setName` (localStorage, trim, puste → usuń klucz).
-  - [x] `features/Settings.tsx` — sekcje Personalizacja (imię) / Dane (Eksport) / Konto (Wyloguj). Miejsce na przyszłe przełączniki.
-  - [x] Router: trasa `/settings` w `App.tsx`.
-  - [x] `Layout.tsx` — usunięte menu ⋮ + logika eksportu/wylogowania (przeniesione do Settings); ikona Ustawień/wstecz, tytuł „Ustawienia".
-  - [x] `Today.tsx` — powitanie „Dzień dobry, <imię> 👋" gdy imię ustawione (odczyt `getName()` przy wejściu).
-  - [x] **P1 #2a: push na `main`** (commit `cd9e982`, `fd30cad..cd9e982`) → Workers Builds auto-redeploy wyzwolony.
-  - [x] **P1 #2b (live): weryfikacja na telefonie** — potwierdzona przez usera (2026-06-18): działa.
-
-### P2 — Następna duża funkcja
-- [~] **P2 #3 — Widok kalendarza** (zgłoszony brak nr 2): podgląd zaplanowanego na kolejne dni.
-      ZAIMPLEMENTOWANE LOKALNIE (2026-06-18), do dowozu. Brainstorm domknięty. Format: agenda-lista, 4. zakładka,
-      tylko zadania z terminem, toggle done z agendy, wszystkie przyszłe bez limitu. Decyzje: `decisions.md`
-      „2026-06-18 — Widok kalendarza". Build (tsc+vite+PWA) + ESLint = czyste.
-  - [x] P1: Nowa zakładka „Kalendarz" w `BottomNav.tsx` (4. pozycja, ikona `CalendarDays` z Lucide).
-  - [x] P1: Route `/calendar` w `App.tsx`.
-  - [x] P1: `features/Calendar.tsx` — agenda-lista: `GET /api/tasks` (już istnieje), filtr `isScheduledFromToday`
-        (due_at od początku dziś lokalnie), grupowanie po dacie lokalnej, nagłówki „Dziś / Jutro / śr · 18 cze".
-  - [x] P1: `CalendarTaskRow.tsx` — świadomie LEKKI wiersz (checkbox toggle + godzina/„cały dzień" + treść),
-        BEZ edycji i usuwania (te zostają w „Zadania", zgodnie z decyzją „podgląd + toggle"). Toggle przez `useTaskActions`.
-  - [x] P1: `EmptyState` gdy brak nadchodzących zadań z terminem.
-  - [x] P1: Build (tsc+vite+PWA) + ESLint czyste.
-  - [x] P1: push na `main` (commit `ea13c40`) → auto-redeploy → **weryfikacja na telefonie POTWIERDZONA przez usera (2026-06-18)**.
-
-### P2/P3 — Usprawnienia przepływu
-- [~] ~~P2/P3 #4 — **Pomysł → zadanie jednym klikiem**~~ — **SKREŚLONE (2026-06-18) wg realnego użycia.**
-      User używa Pomysłów jako checklisty „things to do", a konkretne terminowe zadania wpisuje wprost w „Zadania" —
-      trzyma oba byty osobno świadomie. Konwersja nie domyka żadnej realnej pętli. Rozważone też odhaczanie pomysłów
-      (checkbox) — odrzucone: dla pomysłów bez archiwum „zrobione" = usunięcie, więc ptaszek dublowałby kosz (chyba że
-      odhaczone zostają przekreślone → puchnąca lista + „Wyczyść zrobione" = przekombinowanie v1). Drzwi otwarte,
-      gdyby przepływ kiedyś się zmienił.
-- [~] P2/P3 #5 — **Import danych = „Odtwórz z kopii" (zastąp wszystko)** — zaimplementowane w lokalnym commicie
-      `fb75bfe` (2026-06-18); repo `main` jest `ahead 1`, czeka na push i weryfikację na telefonie.
-      Wariant A (replace), nie merge (decyzja usera). Lustro eksportu: `{tasks, ideas, projects, routines}`,
-      subskrypcje push NIETKNIĘTE (związane z urządzeniem). Siatka bezpieczeństwa: auto-eksport bieżących danych
-      przed nadpisaniem. Bez zmian schematu D1.
-  - [x] P1: Backend — pure `parseImport(raw): {ok, data|error}` w nowym `worker/src/import.ts` (walidacja kształtu:
-        4 tablice, pola/typy wierszy; zły/uszkodzony JSON → błąd, ZERO dotknięcia danych). Testowalne bez mocka (lekcja sesji 10).
-  - [x] P1: Backend — `POST /api/import` w `index.ts`: `parseImport` → przy błędzie `400`; przy OK jedna transakcja
-        `DB.batch` (DELETE z tasks/ideas/projects/routines + INSERT z pliku, projekty przed pomysłami, ID zachowane).
-        Zwraca podsumowanie (liczby). Brak częściowego importu (wszystko w batchu).
-  - [x] P1: Test Vitest dla `parseImport` (bieżący + 2 starsze formaty, brak tablicy, typy/enumy, duplikaty,
-        osierocony projekt, śmieci, przyszła wersja) — 10/10 nowych, 20/20 worker łącznie.
-  - [x] P1: Front — `lib/import.ts`: czyta `File` (`text()`), `JSON.parse` z obsługą błędu, `POST /api/import`.
-  - [x] P1: Front — `Settings.tsx` sekcja Dane: przycisk „Odtwórz z kopii" + ukryty `<input type=file accept=.json>` +
-        inline dwukrok potwierdzenia („To zastąpi wszystkie dane. Tak · Nie", wzorzec `ConfirmDeleteButton`).
-        Na potwierdzeniu: najpierw `downloadExport()` (siatka), potem import; po sukcesie `invalidateQueries`
-        (tasks/ideas/projects/routines) + komunikat „Odtworzono".
-  - [x] P1: Build (tsc+vite+PWA) + ESLint + worker tsc/test czyste. Front testy 7/7, worker 20/20.
-  - [ ] P1: push lokalnego commita `fb75bfe` na `main` → Workers Builds auto-redeploy.
-  - [ ] P1 (live, user): eksport → dodanie tymczasowego rekordu → import kopii → rekord znika, wcześniejsze dane zgodne.
-
-### P3 — Drobne, gdy zaboli w użyciu
-- [~] **P3 #6 — Przypomnienie z wyprzedzeniem + licznik do terminu.** ZAIMPLEMENTOWANE I ZWERYFIKOWANE
-      LOKALNIE (sesja 14, 2026-06-19), niezacommitowane. Plan: `docs/plans/task-reminder-offset.md`.
-      Weryfikacja: worker 26/26 + tsc, web 14/14 + lint + build, lokalny smoke D1 (kwalifikacja crona + granica) — czyste.
-  - [x] P1: Migracja `0004_task_reminder_offset.sql` — `tasks.reminder_offset_minutes` z domyślnym `0`;
-        dozwolone wartości: `0`, `15`, `30`, `60`. Istniejące zadania zachowują „O terminie".
-  - [x] P1: Backend POST/PATCH `/api/tasks` — walidacja offsetu (`readOffset`, 400 dla spoza zestawu);
-        zmiana terminu lub offsetu ustawia `reminded_at = NULL`; brak terminu wymusza offset `0`.
-  - [x] P1: Cron nadal co minutę i jeden push na zadanie — kwalifikacja w chwili
-        `unixepoch(due_at) - reminder_offset_minutes*60 <= unixepoch(now)`; spóźnione → najbliższy cykl.
-  - [x] P1: Treść push (`reminderTitle` w `scheduler.ts`) — `Przypomnienie` dla `0`, a dla wyprzedzenia
-        `Za 15 min`, `Za 30 min` lub `Za 1 godz.`; body = treść zadania.
-  - [x] P1: Front tworzenia i edycji — `ReminderOffsetPicker` widoczny tylko po ustawieniu daty i godziny;
-        domyślnie „O terminie", opcje `15 min`, `30 min`, `1 godz.` wcześniej.
-  - [x] P1: Widoki „Dziś", „Zadania" i „Kalendarz" — termin + lokalny licznik (`useMinuteNow`, `za X` / `X temu`)
-        + ustawione wyprzedzenie. Zadania ukończone nie pokazują licznika.
-  - [x] P1: Eksport/import — pole zachowane w kopii; starsze kopie bez pola mapują offset na `0`;
-        `format_version` pozostaje `1` (zmiana addytywna). INSERT importu z `COALESCE(...,0)`.
-  - [x] P1: Testy backendu/frontu + lokalny smoke D1 dla `0/15/30/60` i momentu granicznego. (Re-arm: w kodzie API.)
-  - [x] P1 (USER, panel): migracja `0004` w D1 Console PRZED pushem kodu — potwierdzona przez usera (2026-06-19).
-  - [x] P1: osobny commit funkcji (`c17f3cc`) po commicie importu `fb75bfe` → push na `main`
-        (`111dfbc..c17f3cc`) → Workers Builds auto-redeploy wyzwolony.
-  - [ ] P1 (live, user): zweryfikować na telefonie co najmniej „O terminie" i jeden wariant wcześniejszy.
-- [~] ~~P3 #7 — Sekcja „Bez terminu" w „Dziś"~~ — **SKREŚLONE 2026-06-19** jako nieużyteczne
-      w realnym przepływie. Zadania bez terminu pozostają dostępne w zakładce „Zadania".
+### Drobne — gdy zaboli w użyciu
 - [ ] P3 #8 — Ręczne sortowanie rutyn (otwarte pytanie — może w ogóle nie uwiera).
 
-### v2+ — Świadomie zaparkowane (zmiany modelu / strategiczne)
+## v2+ — Świadomie zaparkowane (zmiany modelu / strategiczne)
 - [ ] v2 #9 — Pełne zadania cykliczne (co tydzień, konkretne dni — poza prostymi rutynami codziennymi).
 - [ ] v2 #10 — Projekty/tagi jako moduł także dla zadań.
 - [ ] v2 #11 — Pełne offline z auto-dosyłaniem (v1: online-only, bez utraty treści przy błędzie).
 - [ ] v2 #12 — Cloudflare Access (login Google) jako osobna strona.
 - [ ] v2 #13 — Wariant „AI w narzędziu" (łamie $0 — wymaga osobnej decyzji).
 
-## Sesja 15 — 3 usprawnienia z użycia (2026-06-19) — DOWIEZIONE I POTWIERDZONE NA TELEFONIE
-Trzy zmiany z realnego użycia. Scope ustalony pytaniami przed kodem. Build (tsc+vite+PWA) + ESLint +
-worker 26/26 + web 14/14 = czyste. Commit `09b415b` na `main` → auto-redeploy. **User potwierdził na żywo:
-priorytety, rutyny i pasek tygodnia działają na telefonie.** Kolejność dowozu zachowana: UPDATE w D1 przed pushem.
-
-### ① Priorytety pomysłów — 4 stany + recolor
-Nowy stan „bez" (0, domyślny) + przesunięte kolory: bez=szary, niski=**żółty**, średni=**pomarańczowy**, wysoki=czerwony.
-Schemat D1 bez zmian (kolumna `priority` to zwykły INTEGER; aplikacja zawsze podaje wartość). Migracja TYLKO danych.
-- [x] `index.css`: token `--color-prio-low` (#f5c563 żółty) + `--color-prio-med` zmieniony na #ff9f45 (pomarańczowy).
-- [x] `lib/ideas.ts`: `IdeaPriority = 0|1|2|3`, `DEFAULT_PRIORITY = 0`, 4 poziomy w `PRIORITIES` (recolor).
-- [x] `worker/src/index.ts`: `clampPriority` przyjmuje 0|1|2|3, fallback 0.
-- [x] `worker/src/import.ts`: walidacja dopuszcza 0; starsze kopie bez `priority` → 0 (nie 1). Testy zaktualizowane.
-- [x] `PriorityPicker.tsx`: 4 segmenty + `flex-wrap` (nie uciekają na wąskim ekranie).
-- [x] `IdeaItem.tsx`: stan „bez" nie reklamuje się — pokazuje samą datę (bez kropki/etykiety).
-- [x] Migracja `0005_idea_priority_none.sql` (`UPDATE ideas SET priority = 0 WHERE priority = 1`).
-- [x] **P1 (USER, panel): UPDATE w D1 Console** — wykonany przez usera przed pushem.
-- [x] P1: push na `main` (commit `09b415b`) → auto-redeploy.
-- [x] P1 (live, user): weryfikacja na telefonie — potwierdzona (kolory + nowy domyślny „bez").
-
-### ② Rutyny — mocna separacja wizualna w „Zadania"
-Sekcja „Codzienne" w osobnym pojemniku (obwódka + lekko inne tło), nagłówek-banda z ikoną ↻ + podtytuł,
-composer rutyn odróżniony od composera zadań (płaskie pole + obrysowany lżejszy przycisk zamiast gradientu).
-Funkcje (dodaj/zmień/usuń/odhacz) bez zmian. Zero zmian D1.
-- [x] `Tasks.tsx`: restyle sekcji „Codzienne" (pojemnik, banda, composer).
-- [x] P1: push na `main` (commit `09b415b`) → auto-redeploy (front-only).
-- [x] P1 (live, user): weryfikacja na telefonie — potwierdzona (rutyny już się nie mieszają z zadaniami).
-
-### ③ Kalendarz — kompaktowy pasek tygodnia
-Nad agendą pasek 7 dni (Pn–Nd): kropka na dniach z zadaniami, dziś podświetlone, strzałki ‹ › zmieniają tydzień,
-tap w dzień filtruje agendę do niego (+ „Pokaż wszystkie"). Front-only, czyta istniejące `GET /api/tasks`, zero zmian D1.
-- [x] Nowy `features/WeekStrip.tsx` (prezentacyjny: busyDays + selected + onSelect).
-- [x] `Calendar.tsx`: stan wybranego dnia, `busyDays` z grup, filtr agendy, chip „Pokaż wszystkie", empty state per dzień.
-- [x] P1: push na `main` (commit `09b415b`) → auto-redeploy (front-only).
-- [x] P1 (live, user): weryfikacja na telefonie — potwierdzona (czytelność paska, kropki, nawigacja tygodni).
-
-## Sesja 16 — ekran gratulacji + odrzucenie tagów i statystyk (2026-06-19)
-Trzy pomysły usera; scope ustalony pytaniami przed kodem. #1 zbudowane, #2/#3 świadomie odrzucone.
-Build (tsc+vite+PWA) + ESLint = czyste. Decyzje trwałe: `../../ai-os/projects/personal-organizer/decisions.md`.
-
-### ① Ekran gratulacji „Dzień zaliczony" — ZAIMPLEMENTOWANE LOKALNIE, do dowozu
-Front-only, zero zmian D1, cron/push nietknięte. Trigger = definicja pierścienia (zadania z terminem na dziś + rutyny),
-`dayComplete = dayTotal > 0 && dayDoneTotal === dayTotal`. Forma = karta in-flow (glass, Aurora). Zaległe nie blokują,
-zostają widoczne pod kartą.
-- [x] Nowy `web/src/components/DayComplete.tsx` (karta glass, `PartyPopper` + aura-badge, podtytuł zależny od zaległych).
-- [x] `features/Today.tsx`: flaga `dayComplete`, render karty z **pierwszeństwem przed `isEmpty`** (fix pułapki
-      „same zadania, wszystko zrobione" → wcześniej zlewało się z pustym dniem), lista rutyn ukryta gdy dzień zaliczony.
-- [x] Build (tsc+vite+PWA) + ESLint czyste.
-- [x] P1: push na `main` (commit `4e7c973`, `09b415b..2d1a8d3`) → Workers Builds auto-redeploy wyzwolony.
-- [ ] P1 (live, user): odhacz cały dzień → karta zamiast list; sprawdź też wariant z zaległymi pod kartą.
-
-### ② Tagi dla zadań — ODRZUCONE (2026-06-19)
-Świadoma decyzja usera. Brak nazwanego bólu z użycia; łamią linię „zadania bez projektów" (15.06). Pozostają
-zaparkowane w v2 #10 (projekty/tagi jako moduł dla zadań). Drzwi otwarte: gdy pojawi się konkretny, powtarzalny podział.
-
-### ③ Statystyki — ODRZUCONE (2026-06-19)
-Świadoma decyzja usera. Sensowne staty (serie, trendy) wymagają logu zdarzeń, którego apka świadomie nie trzyma
-(„świat tylko dziś bez historii"). Staty „stanowe" w ~80% pokrywa pierścień. Drzwi otwarte dopiero po decyzji
-o zbieraniu historii (osobna tabela logu).
-
-## Sesja 17 — przełącznik trybu „Zadania | Codzienne" (2026-06-20) — DOWIEZIONE I POTWIERDZONE NA TELEFONIE ✅
-Tarcie z użycia: dodawanie rutyn zlewało się z dodawaniem zadań mimo kosmetycznej separacji z sesji 15.
-Źródło = dwa bliźniacze composery „wpisz + Dodaj" na jednym ekranie. Fix strukturalny (opcja A z 3 wariantów).
-- [x] `web/src/features/Tasks.tsx`: stan `mode: "tasks" | "routines"` + segmentowany przełącznik na górze
-      (gradient na aktywnym, licznik rutyn przy „Codzienne"); naraz jeden composer + jedna lista; filtry tylko w „Zadania".
-- [x] Usunięta dolna sekcja „Codzienne" (treść przeniesiona do trybu). Tryb startuje na „Zadania", nie zapamiętywany.
-- [x] Front-only, zero D1/cron/push. Build (tsc+vite+PWA) + ESLint czyste.
-- [x] Push na `main`: `0e9119d` (higiena docs) + `3759647` (przełącznik), `2d1a8d3..3759647` → auto-redeploy.
-- [x] User potwierdził na telefonie: mieszanie zniknęło. Otwarte pytanie o separację rutyn (sesja 15) ZAMKNIĘTE.
-
-## Sesja 18 — fix laga startowego danych (2026-06-23) — ZAIMPLEMENTOWANE I ZWERYFIKOWANE LOKALNIE, do dowozu
-Tarcie z użycia: po dłuższej przerwie apka wstaje od razu, ale zadania/pomysły doczytują się ~30 s.
-Diagnoza: backend trywialny (SELECT * na maleńkich tabelach) → nie baza. Przyczyny po stronie klienta:
-(1) po ubiciu apki przez Androida cache TanStack (RAM) pusty → trzeba pobrać wszystko z sieci, zanim coś widać;
-(2) `fetch` bez timeoutu → pierwsze żądanie na śpiącym radiu telefonu wisi ~20–30 s. Fix front-only, zero D1/cron/push.
-- [x] `main.tsx`: `PersistQueryClientProvider` + `createSyncStoragePersister(localStorage)` (klucz `po-query-cache`,
-      `maxAge`/`gcTime` = 7 dni, `buster='1'`) → dane od razu po otwarciu (stale-while-revalidate); `staleTime` 1 min, `retry` 2.
-- [x] `api.ts`: timeout 10 s na `fetch` (`AbortSignal.timeout` + `AbortSignal.any` z sygnałem wołającego) → szybkie ponowienie zamiast zawisu.
-- [x] Paczki: `@tanstack/react-query-persist-client` + `@tanstack/query-sync-storage-persister` @5.101.1
-      (zweryfikowane: ten sam wydawca/wersja co react-query, zero obcych zależności przechodnich).
-- [x] Weryfikacja lokalna: build (tsc+vite+PWA) + ESLint + testy 14/14 — czyste.
-- [ ] P1: push na `main` → Workers Builds auto-redeploy (front-only, bez migracji D1).
-- [ ] P1 (live, user): po dłuższej przerwie otworzyć apkę → zadania/pomysły widoczne od razu (z pamięci),
-      świeże dociągają w tle w kilka s, nie w 30.
-
 ## Notatki
-- Najpierw Faza 1 (push end-to-end). Ryzyko nr 1: wysyłka Web Push z Workera — udowodnić w spike'u, zanim zbudujemy resztę.
 - $0: Cron co minutę = 1440/dobę << 100k limit Workers; D1/Pages z dużym zapasem; nigdy plan z kartą (fail-closed).
 - Strefa: front konwertuje lokalny↔UTC; baza i cron w UTC.
 - FCM/Firebase świadomie odrzucone (jeden dostawca; budzik Google wymaga karty).
+- **Dyscyplina cache:** każda zmiana KSZTAŁTU danych w cache TanStack wymaga bumpu `buster` w `main.tsx`
+  (inaczej stary cache zostanie podany jako świeży).
