@@ -14,7 +14,7 @@ Stack: Cloudflare Workers (Hono) + D1 + Cron + Web Push + Workers Static Assets;
 front React + Vite + TS, Tailwind, TanStack Query (cache persist do `localStorage`).
 Auth = token aplikacyjny Bearer (NIE Cloudflare Access). Repo: GitHub `Mateo2215/Personal-Organizer`, gałąź `main`.
 
-**Repo czyste i zsynchronizowane z `origin/main`** (ostatni commit pracy: sesja 18, `9fa06fb`).
+**Repo czyste i zsynchronizowane z `origin/main`** (ostatni commit funkcji: sesja 20, `9f888d1`).
 Cała mapa drogowa P1/P2/P3 dowieziona i potwierdzona na żywo (m.in. lag startowy i ekran gratulacji
 potwierdzone przez usera 2026-06-30). Świadomie skreślone: pomysł→zadanie (#4), sekcja „Bez terminu" (#7),
 tagi i statystyki (łamią linie cięcia v1).
@@ -27,7 +27,7 @@ Deploy NIE używa lokalnego toolchainu. Migrację D1 zakładaj PRZED pushem (pus
 
 ## Otwarte pozycje
 
-### Zbiorcze usuwanie wykonanych zadań — zaimplementowane lokalnie, czeka na deploy
+### Zbiorcze usuwanie wykonanych zadań — wypchnięte na `main`, czeka na test telefonu
 - [x] Dodać chroniony endpoint usuwający wszystkie zwykłe zadania ze statusem `done`.
 - [x] Dodać dwustopniowy przycisk „Usuń wykonane (N)” w trybie „Zadania”.
 - [x] Potwierdzić testami, lintem i buildem, że rutyny oraz pozostałe zachowania są nietknięte.
