@@ -51,6 +51,9 @@ export const patchTask = (id: number, patch: TaskPatch) =>
 export const deleteTask = (id: number) =>
   api<void>(`/api/tasks/${id}`, { method: "DELETE" });
 
+export const deleteCompletedTasks = () =>
+  api<void>("/api/tasks/completed", { method: "DELETE" });
+
 // Wartość z <input type="datetime-local"> (lokalna, bez strefy) → ISO UTC.
 export function localInputToUtcIso(value: string): string {
   return new Date(value).toISOString();

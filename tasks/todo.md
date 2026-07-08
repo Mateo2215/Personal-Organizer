@@ -27,7 +27,14 @@ Deploy NIE używa lokalnego toolchainu. Migrację D1 zakładaj PRZED pushem (pus
 
 ## Otwarte pozycje
 
+### Zbiorcze usuwanie wykonanych zadań — zaimplementowane lokalnie, czeka na deploy
+- [x] Dodać chroniony endpoint usuwający wszystkie zwykłe zadania ze statusem `done`.
+- [x] Dodać dwustopniowy przycisk „Usuń wykonane (N)” w trybie „Zadania”.
+- [x] Potwierdzić testami, lintem i buildem, że rutyny oraz pozostałe zachowania są nietknięte.
+
 ### Weryfikacje na telefonie (klik usera — kod nie wykona)
+- [ ] **P2: Zbiorcze usuwanie po deployu** — wykonaj dwa zwykłe zadania, zostaw jedno otwarte i jedną rutynę,
+      potwierdź licznik oraz dwukrok, a po usunięciu sprawdź, że zostały zadanie otwarte i rutyna.
 - [ ] **P3: Deliberowany test restore** (import #5) — eksport → dodaj rekord tymczasowy → „Odtwórz z kopii"
       → rekord znika, wcześniejsze dane zgodne. Niski priorytet (kod 20/20 + smoke + zdrowy deploy);
       przy okazji ocenić czytelność auto-eksportu przed nadpisaniem.

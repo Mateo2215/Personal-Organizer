@@ -89,6 +89,13 @@ app.post("/api/tasks", async (c) => {
   return c.json(row, 201);
 });
 
+// Zbiorcze sprzątanie ukończonych zwykłych zadań. Rutyny żyją w osobnej tabeli i nie są dotykane.
+// Trasa statyczna musi być zarejestrowana przed /api/tasks/:id.
+app.delete("/api/tasks/completed", async (c) => {
+  await c.env.DB.prepare("DELETE FROM tasks WHERE status = 'done'").run();
+  return c.body(null, 204);
+});
+
 app.patch("/api/tasks/:id", async (c) => {
   const id = Number(c.req.param("id"));
   const body = await c.req.json<{

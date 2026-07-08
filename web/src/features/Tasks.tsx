@@ -14,6 +14,7 @@ import { TaskRow } from "./TaskRow";
 import { RoutineRow } from "./RoutineRow";
 import { ReminderOffsetPicker } from "./ReminderOffsetPicker";
 import { EmptyState } from "../components/EmptyState";
+import { ClearCompletedButton } from "../components/ClearCompletedButton";
 
 type Filter = "all" | "today" | "upcoming";
 type Mode = "tasks" | "routines";
@@ -39,7 +40,7 @@ function chipLabel(local: string): string {
 export function TasksPage() {
   const qc = useQueryClient();
   const { data: tasks, isLoading, isError } = useTasks();
-  const { toggle, remove, update } = useTaskActions();
+  const { toggle, remove, removeCompleted, update } = useTaskActions();
 
   const add = useMutation({
     mutationFn: addTask,
@@ -88,6 +89,7 @@ export function TasksPage() {
   const visible = (tasks ?? []).filter((t) =>
     filter === "today" ? isToday(t) : filter === "upcoming" ? isUpcoming(t) : true,
   );
+  const completedCount = (tasks ?? []).filter((t) => t.status === "done").length;
 
   const routineCount = (routines ?? []).length;
 
@@ -204,6 +206,16 @@ export function TasksPage() {
                 <li className="py-2 text-sm text-faint">Brak zadań w tym filtrze.</li>
               )}
             </ul>
+          )}
+
+          {!isLoading && !isError && (
+            <ClearCompletedButton
+              count={completedCount}
+              isPending={removeCompleted.isPending}
+              isError={removeCompleted.isError}
+              onConfirm={() => removeCompleted.mutateAsync()}
+              onReset={removeCompleted.reset}
+            />
           )}
         </>
       ) : (
