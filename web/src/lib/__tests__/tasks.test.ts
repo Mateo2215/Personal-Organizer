@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatRelativeToDue, offsetLabel } from "../tasks";
+import { formatRelativeToDue, formatTaskDue, offsetLabel } from "../tasks";
 
 const now = Date.parse("2026-06-19T12:00:00.000Z");
 
@@ -36,5 +36,16 @@ describe("offsetLabel", () => {
 
   it("nieznana wartość → brak etykiety", () => {
     expect(offsetLabel(45)).toBeNull();
+  });
+});
+
+describe("formatTaskDue", () => {
+  it("dodaje skrót dnia tygodnia do terminu", () => {
+    expect(formatTaskDue(new Date(2026, 6, 13, 14, 0).toISOString())).toBe("pon., 13.07, 14:00");
+    expect(formatTaskDue(new Date(2026, 6, 15, 9, 5).toISOString())).toBe("śr., 15.07, 09:05");
+  });
+
+  it("bez terminu zachowuje czytelną etykietę", () => {
+    expect(formatTaskDue(null)).toBe("bez terminu");
   });
 });

@@ -5,7 +5,15 @@
 import { useState, type FormEvent } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { BellRing, Calendar, ListChecks, Repeat } from "lucide-react";
-import { addTask, localInputToUtcIso, isOverdue, isToday, isUpcoming, type ReminderOffset } from "../lib/tasks";
+import {
+  addTask,
+  formatTaskDue,
+  isOverdue,
+  isToday,
+  isUpcoming,
+  localInputToUtcIso,
+  type ReminderOffset,
+} from "../lib/tasks";
 import { isDoneToday } from "../lib/routines";
 import { useTasks, useTaskActions } from "./useTaskActions";
 import { useRoutines, useRoutineActions } from "./useRoutineActions";
@@ -29,13 +37,6 @@ const MODES: { key: Mode; label: string }[] = [
   { key: "tasks", label: "Zadania" },
   { key: "routines", label: "Codzienne" },
 ];
-
-// Lokalny input "YYYY-MM-DDTHH:mm" → krótka etykieta chipa "16.06, 14:00".
-function chipLabel(local: string): string {
-  const d = new Date(local);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${pad(d.getDate())}.${pad(d.getMonth() + 1)}, ${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
 
 export function TasksPage() {
   const qc = useQueryClient();
@@ -134,7 +135,9 @@ export function TasksPage() {
             <div className="flex items-center justify-between gap-2">
               <label className="relative flex cursor-pointer items-center gap-2 rounded-[20px] border border-card-border bg-field px-3.5 py-2 text-sm">
                 <Calendar size={15} strokeWidth={2} className="text-accent" />
-                <span className={due ? "text-ink" : "text-muted"}>{due ? chipLabel(due) : "Termin"}</span>
+                <span className={due ? "text-ink" : "text-muted"}>
+                  {due ? formatTaskDue(localInputToUtcIso(due)) : "Termin"}
+                </span>
                 <input
                   type="datetime-local"
                   value={due}

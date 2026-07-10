@@ -6,7 +6,7 @@ import { Check, Bell, Pencil } from "lucide-react";
 import { ConfirmDeleteButton } from "../components/ConfirmDeleteButton";
 import { ReminderOffsetPicker } from "./ReminderOffsetPicker";
 import {
-  formatLocal,
+  formatTaskDue,
   formatRelativeToDue,
   localInputToUtcIso,
   offsetLabel,
@@ -91,6 +91,7 @@ export function TaskRow({
             onChange={(e) => setDue(e.target.value)}
             className="w-full rounded-[12px] border border-card-border bg-field px-3 py-2 text-sm text-muted outline-none focus:border-accent/60"
           />
+          {due && <p className="text-xs text-faint">{formatTaskDue(localInputToUtcIso(due))}</p>}
           {/* Wyprzedzenie tylko, gdy ustawiono termin z godziną. */}
           {due && (
             <div className="flex items-center gap-2 text-xs text-muted">
@@ -155,7 +156,7 @@ export function TaskRow({
           }`}
         >
           {hasTime && <Bell size={12} strokeWidth={2} />}
-          {formatLocal(hasTime ? task.due_at : null)}
+          {formatTaskDue(hasTime ? task.due_at : null)}
           {hasTime && !done && task.due_at && (
             <span className="font-medium text-faint">· {formatRelativeToDue(task.due_at, now)}</span>
           )}

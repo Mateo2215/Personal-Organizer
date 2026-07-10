@@ -27,12 +27,19 @@ Deploy NIE używa lokalnego toolchainu. Migrację D1 zakładaj PRZED pushem (pus
 
 ## Otwarte pozycje
 
+### Skróty dni tygodnia przy terminach — lokalnie gotowe, czekają na deploy i test telefonu
+- [x] Dodać wspólny formatter `pon., 13.07, 14:00` dla terminów zadań, bez zmiany API ani danych.
+- [x] Pokazać skrót w formularzu dodawania, wierszach „Zadania”/„Dziś” oraz podglądzie edycji.
+- [x] Potwierdzić testami, lintem i buildem poprawne dni tygodnia oraz brak terminu.
+
 ### Zbiorcze usuwanie wykonanych zadań — wypchnięte na `main`, czeka na test telefonu
 - [x] Dodać chroniony endpoint usuwający wszystkie zwykłe zadania ze statusem `done`.
 - [x] Dodać dwustopniowy przycisk „Usuń wykonane (N)” w trybie „Zadania”.
 - [x] Potwierdzić testami, lintem i buildem, że rutyny oraz pozostałe zachowania są nietknięte.
 
 ### Weryfikacje na telefonie (klik usera — kod nie wykona)
+- [ ] **P2: Skróty dni tygodnia po deployu** — dodaj lub edytuj zadanie na dzień inny niż dziś i potwierdź
+      `pon.`/`wt.`/`śr.` w chipie formularza, na „Zadania”, „Dziś” oraz w podglądzie edycji.
 - [ ] **P2: Zbiorcze usuwanie po deployu** — wykonaj dwa zwykłe zadania, zostaw jedno otwarte i jedną rutynę,
       potwierdź licznik oraz dwukrok, a po usunięciu sprawdź, że zostały zadanie otwarte i rutyna.
 - [ ] **P3: Deliberowany test restore** (import #5) — eksport → dodaj rekord tymczasowy → „Odtwórz z kopii"
