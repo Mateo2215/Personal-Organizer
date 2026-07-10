@@ -78,17 +78,19 @@ export function formatLocal(iso: string | null): string {
   });
 }
 
-// ISO UTC → termin zadania z krótkim dniem tygodnia, np. „pon., 13.07, 14:00”.
+// ISO UTC → termin zadania z krótkim dniem tygodnia, np. „13.07, 14:00 - pon.”.
 // Osobny formatter zachowuje dotychczasowy, neutralny format dat dla pozostałych rekordów.
 export function formatTaskDue(iso: string | null): string {
   if (!iso) return "bez terminu";
-  return new Date(iso).toLocaleString("pl-PL", {
-    weekday: "short",
+  const due = new Date(iso);
+  const dateTime = due.toLocaleString("pl-PL", {
     day: "2-digit",
     month: "2-digit",
     hour: "2-digit",
     minute: "2-digit",
   });
+  const weekday = due.toLocaleDateString("pl-PL", { weekday: "short" });
+  return `${dateTime} - ${weekday}`;
 }
 
 // Zaległe: otwarte zadanie z terminem, którego czas już minął.

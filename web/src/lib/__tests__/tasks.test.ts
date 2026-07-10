@@ -40,9 +40,9 @@ describe("offsetLabel", () => {
 });
 
 describe("formatTaskDue", () => {
-  it("dodaje skrót dnia tygodnia do terminu", () => {
-    expect(formatTaskDue(new Date(2026, 6, 13, 14, 0).toISOString())).toBe("pon., 13.07, 14:00");
-    expect(formatTaskDue(new Date(2026, 6, 15, 9, 5).toISOString())).toBe("śr., 15.07, 09:05");
+  it("dodaje skrót dnia tygodnia na końcu terminu", () => {
+    expect(formatTaskDue(new Date(2026, 6, 13, 14, 0).toISOString())).toBe("13.07, 14:00 - pon.");
+    expect(formatTaskDue(new Date(2026, 6, 15, 9, 5).toISOString())).toBe("15.07, 09:05 - śr.");
   });
 
   it("bez terminu zachowuje czytelną etykietę", () => {
