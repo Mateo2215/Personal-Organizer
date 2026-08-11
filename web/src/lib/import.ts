@@ -19,6 +19,9 @@ export interface ImportSummary {
     ideas: number;
     projects: number;
     routines: number;
+    // null = kopia nie zawierała urodzin (starszy format), więc lista została nietknięta.
+    // Starsze Workery nie zwracają tego pola wcale — stąd też undefined.
+    birthdays?: number | null;
   };
 }
 

@@ -1,7 +1,10 @@
 // Validates and normalizes organizer backup files before any database writes.
 // Supports the current versioned format and the two earlier unversioned export shapes.
 
-export const EXPORT_FORMAT_VERSION = 1 as const;
+export const EXPORT_FORMAT_VERSION = 2 as const;
+
+// Wersje, które umiemy wczytać. 1 = kopie sprzed urodzin (wciąż w pełni obsługiwane).
+const SUPPORTED_VERSIONS: number[] = [1, 2];
 
 export interface ImportTask {
   id: number;
@@ -36,12 +39,26 @@ export interface ImportRoutine {
   created_at: string;
 }
 
+export interface ImportBirthday {
+  id: number;
+  name: string;
+  month: number;
+  day: number;
+  birth_year: number | null;
+  last_notified_year: number | null;
+  created_at: string;
+}
+
 export interface ImportData {
   format_version: typeof EXPORT_FORMAT_VERSION;
   tasks: ImportTask[];
   ideas: ImportIdea[];
   projects: ImportProject[];
   routines: ImportRoutine[];
+  // ŚWIADOMIE inaczej niż routines: `null` = kopia w ogóle nie wspomina o urodzinach (wersja < 2),
+  // więc zostawiamy tabelę nietkniętą. `[]` = kopia mówi wprost „brak urodzin" i wtedy czyścimy.
+  // Bez tego rozróżnienia odtworzenie kopii sprzed tej funkcji po cichu skasowałoby całą listę.
+  birthdays: ImportBirthday[] | null;
 }
 
 export type ImportParseResult =
@@ -177,6 +194,45 @@ function parseIdea(value: unknown, index: number, legacy: boolean): ImportIdea {
   };
 }
 
+function requireNullableInteger(value: unknown, path: string): number | null {
+  if (value === null || value === undefined) return null;
+  if (!Number.isInteger(value)) fail(`${path} must be an integer or null`);
+  return value as number;
+}
+
+const DAYS_IN_MONTH = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+function parseBirthday(value: unknown, index: number): ImportBirthday {
+  const row = requireRecord(value, `birthdays[${index}]`);
+
+  const month = row.month;
+  if (!Number.isInteger(month) || (month as number) < 1 || (month as number) > 12) {
+    fail(`birthdays[${index}].month must be 1-12`);
+  }
+  // 29 lutego jest poprawne — data urodzin nie niesie roku, więc nie ma czego sprawdzać.
+  const day = row.day;
+  if (
+    !Number.isInteger(day)
+    || (day as number) < 1
+    || (day as number) > DAYS_IN_MONTH[(month as number) - 1]
+  ) {
+    fail(`birthdays[${index}].day is invalid for the month`);
+  }
+
+  return {
+    id: requirePositiveInteger(row.id, `birthdays[${index}].id`),
+    name: requireNonEmptyString(row.name, `birthdays[${index}].name`),
+    month: month as number,
+    day: day as number,
+    birth_year: requireNullableInteger(row.birth_year, `birthdays[${index}].birth_year`),
+    last_notified_year: requireNullableInteger(
+      row.last_notified_year,
+      `birthdays[${index}].last_notified_year`,
+    ),
+    created_at: requireTimestamp(row.created_at, `birthdays[${index}].created_at`),
+  };
+}
+
 function parseRoutine(value: unknown, index: number): ImportRoutine {
   const row = requireRecord(value, `routines[${index}]`);
   return {
@@ -209,7 +265,7 @@ export function parseImport(raw: unknown): ImportParseResult {
     const root = requireRecord(parsed, "backup");
     const version = root.format_version;
     const legacy = version === undefined;
-    if (!legacy && version !== EXPORT_FORMAT_VERSION) {
+    if (!legacy && !SUPPORTED_VERSIONS.includes(version as number)) {
       fail(`unsupported format_version: ${String(version)}`);
     }
 
@@ -220,11 +276,16 @@ export function parseImport(raw: unknown): ImportParseResult {
       ? []
       : requireArray(root.routines, "routines");
     const routines = routinesRaw.map(parseRoutine);
+    // Brak klucza = kopia sprzed urodzin → null (nie ruszaj tabeli). Obecny klucz walidujemy zwyczajnie.
+    const birthdays = root.birthdays === undefined
+      ? null
+      : requireArray(root.birthdays, "birthdays").map(parseBirthday);
 
     assertUniqueIds(tasks, "tasks");
     assertUniqueIds(projects, "projects");
     assertUniqueIds(ideas, "ideas");
     assertUniqueIds(routines, "routines");
+    if (birthdays) assertUniqueIds(birthdays, "birthdays");
 
     const projectIds = new Set(projects.map((project) => project.id));
     for (const [index, idea] of ideas.entries()) {
@@ -241,6 +302,7 @@ export function parseImport(raw: unknown): ImportParseResult {
         ideas,
         projects,
         routines,
+        birthdays,
       },
     };
   } catch (error) {

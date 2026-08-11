@@ -6,14 +6,17 @@ import { useNavigate } from "react-router-dom";
 import { Plus, BellRing, Sparkles } from "lucide-react";
 import { useTasks, useTaskActions } from "./useTaskActions";
 import { useRoutines, useRoutineActions } from "./useRoutineActions";
+import { useBirthdays } from "./useBirthdayActions";
 import { useMinuteNow } from "./useMinuteNow";
 import { TaskRow } from "./TaskRow";
 import { RoutineRow } from "./RoutineRow";
 import { ProgressRing } from "../components/ProgressRing";
 import { EmptyState } from "../components/EmptyState";
 import { DayComplete } from "../components/DayComplete";
+import { BirthdayCard } from "../components/BirthdayCard";
 import { isOverdue, isToday } from "../lib/tasks";
 import { isDoneToday } from "../lib/routines";
+import { isBirthdayToday } from "../lib/birthdays";
 import { getName } from "../lib/settings";
 import { enablePush, notificationsGranted, syncPushSubscription } from "../lib/push";
 
@@ -30,6 +33,7 @@ export function Today() {
   const { toggle, remove, update } = useTaskActions();
   const { data: routines, isLoading: routinesLoading } = useRoutines();
   const { toggle: toggleRoutine } = useRoutineActions();
+  const { data: birthdays } = useBirthdays();
   const navigate = useNavigate();
   const now = useMinuteNow();
   const name = getName(); // imię z localStorage (odczyt przy każdym wejściu na „Dziś")
@@ -68,6 +72,10 @@ export function Today() {
 
   const allRoutines = routines ?? [];
   const routinesDone = allRoutines.filter(isDoneToday).length;
+
+  // Urodziny są POZA pierścieniem postępu — nie ma ich jak „odhaczyć", więc nie są częścią planu dnia.
+  const nowDate = new Date(now);
+  const todaysBirthdays = (birthdays ?? []).filter((b) => isBirthdayToday(b, nowDate));
 
   // Postęp dnia: zrobione / wszystkie dzisiejsze — zadania z terminem na dziś + rutyny razem.
   const dayTasks = all.filter(isToday);
@@ -117,6 +125,10 @@ export function Today() {
       {pushMsg && <p className="text-xs text-muted">{pushMsg}</p>}
 
       {isLoading && <p className="text-sm text-faint">Wczytuję…</p>}
+
+      {/* Urodziny stoją NAD dniem zaliczonym i nad stanem pustym — to informacja, nie zadanie,
+          więc nie może zniknąć ani po odhaczeniu wszystkiego, ani przy pustym dniu. */}
+      {todaysBirthdays.length > 0 && <BirthdayCard birthdays={todaysBirthdays} now={nowDate} />}
 
       {dayComplete && <DayComplete hasOverdue={overdue.length > 0} />}
 

@@ -11,13 +11,21 @@ const TITLES: Record<string, string> = {
   "/tasks": "Zadania",
   "/ideas": "Pomysły",
   "/settings": "Ustawienia",
+  "/birthdays": "Urodziny",
+};
+
+// Ekrany „w głąb" (poza dolną nawigacją) pokazują strzałkę wstecz zamiast wejścia w Ustawienia.
+// Urodziny są podstroną Ustawień, więc wracają TAM, a nie na „Dziś".
+const BACK_TARGETS: Record<string, string> = {
+  "/settings": "/",
+  "/birthdays": "/settings",
 };
 
 export function Layout() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const title = TITLES[pathname] ?? "Personal Organizer";
-  const isSettings = pathname === "/settings";
+  const backTarget = BACK_TARGETS[pathname];
 
   return (
     <div className="mx-auto flex min-h-full max-w-md flex-col">
@@ -28,9 +36,9 @@ export function Layout() {
         </div>
 
         {/* Wejście do Ustawień (eksport, wylogowanie, personalizacja); na samym ekranie Ustawień — powrót. */}
-        {isSettings ? (
+        {backTarget ? (
           <button
-            onClick={() => navigate("/")}
+            onClick={() => navigate(backTarget)}
             aria-label="Wstecz"
             className="-m-1 p-2 text-muted transition-colors hover:text-accent"
           >

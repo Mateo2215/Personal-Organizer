@@ -27,6 +27,82 @@ Deploy NIE używa lokalnego toolchainu. Migrację D1 zakładaj PRZED pushem (pus
 
 ## Otwarte pozycje
 
+### 🎂 Urodziny — NOWA FUNKCJA (plan zatwierdzony, implementacja fazami)
+
+**Cel:** push o 8:00 rano czasu lokalnego w dniu urodzin kogoś z grona + karta „Dziś urodziny ma X" na ekranie „Dziś".
+
+**Ustalenia (sesja 22):** powiadomienie TYLKO w dniu (bez wyprzedzenia); zarządzanie listą na
+osobnej podstronie `/birthdays` z wejściem z Ustawień (dolna nawigacja zostaje 4-zakładkowa);
+urodziny wchodzą do eksportu/importu w tej samej sesji (`format_version` 1→2).
+
+**Model:** osobna tabela `birthdays` z `month`+`day` (BEZ roku w kluczu) — rocznica jest niejawna,
+więc omijamy „przezbrajanie terminu" z v2 #9. `last_notified_year` = idempotencja roczna,
+dokładny wzorzec `last_done_on` z rutyn. `birth_year` opcjonalny → wiek tylko gdy znany.
+
+#### Faza 1 — dane + API + cron (backend, jeszcze niewidoczne) — ✅ KOD GOTOWY, NIEWYPCHNIĘTY
+- [x] `worker/migrations/0006_birthdays.sql` — tabela + indeks `(month, day)`.
+      ⚠️ ZAŁOŻYĆ RĘCZNIE W D1 CONSOLE **PRZED** pushem (push = natychmiastowy redeploy prod).
+- [x] `worker/src/birthdays.ts` (nowy, czysty/testowalny jak `scheduler.ts`): lokalna data w
+      `Europe/Warsaw` przez `Intl` (DST samo się liczy), dopasowanie `month`/`day`,
+      **fallback 29.02 → 28.02 w latach nieprzestępnych**, treść powiadomienia + wiek.
+- [x] CRUD `/api/birthdays` w `worker/src/index.ts` (GET/POST/PATCH/DELETE) + walidacja zakresów
+      (`month` 1-12, `day` zgodny z miesiącem, `birth_year` sensowny lub NULL).
+- [x] Rozszerzyć handler `scheduled`: gdy lokalna godzina < 8 → **w ogóle nie ruszamy D1** ($0);
+      gdy ≥ 8 → wyślij dla dopasowanych z `last_notified_year` < bieżący rok, ustaw rok
+      dopiero po ≥1 odpowiedzi 2xx (ta sama polityka co `reminded_at`; zgubiony tick sam się naprawia).
+- [x] Testy workera: dopasowanie dat, 29.02, próg godziny, walidacja tras, re-arm po zmianie daty.
+- [x] **Refaktor przy okazji:** polityka „ślad dopiero po ≥1 2xx" wyciągnięta z `processTaskReminders`
+      do wspólnego `notifySubscribers` w `scheduler.ts` — jedna kopia zamiast dwóch rozjeżdżających się.
+      `processTaskReminders` zostało cienką nakładką o niezmienionej sygnaturze.
+- [x] **Weryfikacja:** worker **69/69** testów (w tym 13 istniejących `scheduler` — dowód braku regresji),
+      `tsc --noEmit` czysty, migracja i zapytania crona sprawdzone na realnym SQLite (`--local`):
+      fallback 29.02 i filtr `last_notified_year` potwierdzone na danych.
+
+- [ ] **P1 (KLIK USERA): założyć migrację `0006` w D1 Console PRZED pushem.** Gołe DDL, jedna linia
+      (konsola spłaszcza tekst, komentarz `--` zjada resztę — zob. `lessons.md` 2026-06-17).
+
+#### Faza 2 — front: ekran zarządzania + karta na „Dziś" — ✅ KOD GOTOWY, NIEWYPCHNIĘTY
+- [x] `web/src/lib/birthdays.ts` — typy, wywołania API, `daysUntil`/`turningAge`/sortowanie/grupowanie.
+      Reguła 29.02 celowo IDENTYCZNA jak w cronie — inaczej lista pokazywałaby co innego, niż wysyła push.
+- [x] `web/src/features/Birthdays.tsx` — lista „od najbliższych" pogrupowana po miesiącach, dodawanie,
+      edycja inline, usuwanie przez istniejący `ConfirmDeleteButton`.
+      Pomocnicze: `useBirthdayActions.ts`, `BirthdayForm.tsx` (wspólny dla dodawania i edycji), `BirthdayRow.tsx`.
+- [x] Trasa `/birthdays` w `App.tsx` + wejście z `Settings.tsx` + tytuł i powrót w `Layout.tsx`
+      (`BACK_TARGETS`: z `/birthdays` wraca się do `/settings`, nie na „Dziś").
+- [x] Karta urodzinowa na „Dziś" (`components/BirthdayCard.tsx`) — **PIERWSZEŃSTWO nad `DayComplete`
+      i `EmptyState`**; urodziny są poza pierścieniem postępu (nie da się ich „odhaczyć").
+- [x] Testy frontu **38/38** (22 nowe), lint czysty, build przechodzi.
+      Bump `buster` NIEPOTRZEBNY (nowy klucz `['birthdays']`, kształt istniejących bez zmian).
+- [ ] **P2 (KLIK USERA): test wizualny na telefonie po deployu** — czy karta czytelna, czy lista
+      od najbliższych ma sens, czy dwa selecty (dzień/miesiąc) są wygodne kciukiem.
+
+- [ ] **Bez wyszukiwarki** — świadomie, do czasu sygnału z użycia. Lista grupowana po miesiącach
+      działa i przy 8, i przy 30 osobach; wyszukiwarka przy kilkunastu byłaby pustym ozdobnikiem.
+
+#### Faza 3 — backup (eksport/import v2) — ✅ KOD GOTOWY, NIEWYPCHNIĘTY
+- [x] `EXPORT_FORMAT_VERSION` 1→2 + `parseBirthday` w `worker/src/import.ts`; `/api/export`
+      i `/api/import` obsługują urodziny; `ExportData` w `web/src/lib/export.ts`.
+      Wersje wczytywane: `SUPPORTED_VERSIONS = [1, 2]` + kopie bez wersji (najstarsze).
+- [x] **Rozstrzygnięte:** `ImportData.birthdays` to `ImportBirthday[] | null`. `null` = kopia
+      nie ma klucza `birthdays` (v1) → **tabela nietknięta**; `[]` = kopia mówi wprost „brak" → czyścimy.
+      Import dokłada `DELETE`+`INSERT` urodzin do batcha WARUNKOWO. Świadome odstępstwo od
+      zachowania `routines` (tam brak klucza = wyczyść) — inaczej odtworzenie starej kopii
+      po cichu skasowałoby całą listę urodzin.
+- [x] Podsumowanie importu rozróżnia „Urodziny: N" od „Lista urodzin bez zmian (kopia jej nie zawierała)".
+      `Settings.tsx` invaliduje też `['birthdays']`.
+- [x] Testy: **worker 78/78** (22 w `import.test.ts`), kopia v1 i bezwersyjna nie kasują urodzin,
+      v2 z `[]` czyści, walidacja daty/duplikatów, odrzucenie wersji 3.
+- [x] **ZMIENIONE 2 ISTNIEJĄCE TESTY** (celowa zmiana zachowania, nie naginanie pod kod):
+      `format_version` w wyniku parsera 1→2 oraz test „odrzuca przyszłą wersję" z 2 na 3.
+- [x] Smoke na realnym SQLite: `INSERT ... json_each` zachowuje `birth_year = NULL`
+      (nie zamienia braku rocznika na 0) i `last_notified_year`.
+
+#### Weryfikacja całości (Fazy 1-3)
+- [x] Worker **78/78**, front **38/38**, `tsc --noEmit` czysty w obu paczkach, lint czysty, build przechodzi.
+- [x] Migracja `0006` założona w produkcyjnym D1 przez usera (2026-08-11, potwierdzone).
+- [ ] **P1: PUSH na `main`** — migracja jest już w D1, więc push jest bezpieczny (kolejność zachowana).
+- [ ] **P2: testy na telefonie po deployu** (patrz pozycje wyżej) + pierwszy realny push urodzinowy.
+
 ### Skróty dni tygodnia przy terminach — wypchnięte na `main`, czekają na test telefonu
 - [x] Dodać wspólny formatter `13.07, 14:00 - pon.` dla terminów zadań, bez zmiany API ani danych.
 - [x] Pokazać skrót w formularzu dodawania, wierszach „Zadania”/„Dziś” oraz podglądzie edycji.

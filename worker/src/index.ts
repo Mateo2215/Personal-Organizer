@@ -5,8 +5,17 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { sendPush, sendToAll, type StoredSubscription } from "./push";
-import { processTaskReminders, reminderTitle } from "./scheduler";
+import { notifySubscribers, processTaskReminders, reminderTitle } from "./scheduler";
 import { EXPORT_FORMAT_VERSION, parseImport } from "./import";
+import {
+  BIRTHDAY_NOTIFY_HOUR,
+  birthdayDayKeys,
+  birthdayNotification,
+  isValidMonthDay,
+  localDateParts,
+  readBirthYear,
+  type BirthdayRow,
+} from "./birthdays";
 
 export interface Env {
   DB: D1Database;
@@ -296,13 +305,86 @@ app.delete("/api/ideas/:id", async (c) => {
   return c.body(null, 204);
 });
 
+// --- Urodziny (rocznica bez roku w kluczu; push o BIRTHDAY_NOTIFY_HOUR czasu lokalnego) ---
+app.get("/api/birthdays", async (c) => {
+  const res = await c.env.DB.prepare(
+    "SELECT * FROM birthdays ORDER BY month ASC, day ASC, name COLLATE NOCASE ASC",
+  ).all();
+  return c.json(res.results ?? []);
+});
+
+app.post("/api/birthdays", async (c) => {
+  const body = await c.req.json<{
+    name?: string;
+    month?: number;
+    day?: number;
+    birth_year?: number | null;
+  }>();
+  const name = body.name?.trim();
+  if (!name) return c.json({ error: "name required" }, 400);
+  if (!isValidMonthDay(body.month, body.day)) return c.json({ error: "invalid date" }, 400);
+  const birthYear = readBirthYear(body.birth_year, localDateParts(new Date()).year);
+  if (birthYear === "invalid") return c.json({ error: "invalid birth year" }, 400);
+
+  const row = await c.env.DB.prepare(
+    "INSERT INTO birthdays (name, month, day, birth_year) VALUES (?, ?, ?, ?) RETURNING *",
+  ).bind(name, body.month, body.day, birthYear).first();
+  return c.json(row, 201);
+});
+
+app.patch("/api/birthdays/:id", async (c) => {
+  const id = Number(c.req.param("id"));
+  const body = await c.req.json<{
+    name?: string;
+    month?: number;
+    day?: number;
+    birth_year?: number | null;
+  }>();
+
+  const sets: string[] = [];
+  const binds: unknown[] = [];
+  if (body.name !== undefined) {
+    const name = body.name.trim();
+    if (!name) return c.json({ error: "name required" }, 400);
+    sets.push("name = ?"); binds.push(name);
+  }
+  // Miesiąc i dzień idą zawsze parą — połowy daty nie da się sensownie zwalidować.
+  if (body.month !== undefined || body.day !== undefined) {
+    if (!isValidMonthDay(body.month, body.day)) return c.json({ error: "invalid date" }, 400);
+    sets.push("month = ?", "day = ?"); binds.push(body.month, body.day);
+    // Poprawiona data "uzbraja" powiadomienie na nowo (wzorzec re-arm z zadań) — bez tego
+    // korekta literówki w dacie zadziałałaby dopiero za rok.
+    sets.push("last_notified_year = NULL");
+  }
+  if (body.birth_year !== undefined) {
+    const birthYear = readBirthYear(body.birth_year, localDateParts(new Date()).year);
+    if (birthYear === "invalid") return c.json({ error: "invalid birth year" }, 400);
+    sets.push("birth_year = ?"); binds.push(birthYear);
+  }
+  if (sets.length === 0) return c.json({ error: "nothing to update" }, 400);
+
+  binds.push(id);
+  const row = await c.env.DB.prepare(
+    `UPDATE birthdays SET ${sets.join(", ")} WHERE id = ? RETURNING *`,
+  ).bind(...binds).first();
+  if (!row) return c.json({ error: "not found" }, 404);
+  return c.json(row);
+});
+
+app.delete("/api/birthdays/:id", async (c) => {
+  const id = Number(c.req.param("id"));
+  await c.env.DB.prepare("DELETE FROM birthdays WHERE id = ?").bind(id).run();
+  return c.body(null, 204);
+});
+
 // --- Eksport danych: wersjonowana kopia zadań, pomysłów, projektów i rutyn. ---
 app.get("/api/export", async (c) => {
-  const [tasksRes, ideasRes, projectsRes, routinesRes] = await Promise.all([
+  const [tasksRes, ideasRes, projectsRes, routinesRes, birthdaysRes] = await Promise.all([
     c.env.DB.prepare("SELECT * FROM tasks ORDER BY created_at ASC, id ASC").all(),
     c.env.DB.prepare("SELECT * FROM ideas ORDER BY created_at ASC, id ASC").all(),
     c.env.DB.prepare("SELECT * FROM projects ORDER BY name COLLATE NOCASE ASC").all(),
     c.env.DB.prepare("SELECT * FROM routines ORDER BY created_at ASC, id ASC").all(),
+    c.env.DB.prepare("SELECT * FROM birthdays ORDER BY month ASC, day ASC, id ASC").all(),
   ]);
   return c.json({
     format_version: EXPORT_FORMAT_VERSION,
@@ -310,6 +392,7 @@ app.get("/api/export", async (c) => {
     ideas: ideasRes.results ?? [],
     projects: projectsRes.results ?? [],
     routines: routinesRes.results ?? [],
+    birthdays: birthdaysRes.results ?? [],
   });
 });
 
@@ -320,9 +403,9 @@ app.post("/api/import", async (c) => {
     return c.json({ error: "invalid import", details: parsed.error }, 400);
   }
 
-  const { tasks, ideas, projects, routines } = parsed.data;
+  const { tasks, ideas, projects, routines, birthdays } = parsed.data;
   try {
-    await c.env.DB.batch([
+    const statements = [
       c.env.DB.prepare("DELETE FROM ideas"),
       c.env.DB.prepare("DELETE FROM routines"),
       c.env.DB.prepare("DELETE FROM tasks"),
@@ -368,7 +451,29 @@ app.post("/api/import", async (c) => {
           json_extract(value, '$.created_at')
         FROM json_each(?)
       `).bind(JSON.stringify(ideas)),
-    ]);
+    ];
+
+    // Urodziny ruszamy TYLKO wtedy, gdy kopia w ogóle o nich mówi. Kopia sprzed tej funkcji
+    // (format_version < 2) nie zawiera klucza `birthdays` i nie może po cichu wyczyścić listy.
+    if (birthdays !== null) {
+      statements.push(
+        c.env.DB.prepare("DELETE FROM birthdays"),
+        c.env.DB.prepare(`
+          INSERT INTO birthdays (id, name, month, day, birth_year, last_notified_year, created_at)
+          SELECT
+            CAST(json_extract(value, '$.id') AS INTEGER),
+            json_extract(value, '$.name'),
+            CAST(json_extract(value, '$.month') AS INTEGER),
+            CAST(json_extract(value, '$.day') AS INTEGER),
+            CAST(json_extract(value, '$.birth_year') AS INTEGER),
+            CAST(json_extract(value, '$.last_notified_year') AS INTEGER),
+            json_extract(value, '$.created_at')
+          FROM json_each(?)
+        `).bind(JSON.stringify(birthdays)),
+      );
+    }
+
+    await c.env.DB.batch(statements);
   } catch (error) {
     console.error("[import] restore failed", error instanceof Error ? error.message : "unknown error");
     return c.json({ error: "import failed" }, 500);
@@ -381,6 +486,8 @@ app.post("/api/import", async (c) => {
       ideas: ideas.length,
       projects: projects.length,
       routines: routines.length,
+      // null = kopia nie zawierała urodzin, więc lista została nietknięta (nie „zero urodzin").
+      birthdays: birthdays === null ? null : birthdays.length,
     },
   });
 });
@@ -391,45 +498,99 @@ app.post("/api/_dev/test-push", async (c) => {
   return c.json(result);
 });
 
+async function loadSubscriptions(env: Env): Promise<StoredSubscription[]> {
+  const res = await env.DB.prepare(
+    "SELECT id, endpoint, p256dh, auth FROM push_subscriptions",
+  ).all<StoredSubscription>();
+  return res.results ?? [];
+}
+
+function deleteSubscription(env: Env, subId: number): Promise<void> {
+  return env.DB.prepare("DELETE FROM push_subscriptions WHERE id = ?")
+    .bind(subId)
+    .run()
+    .then(() => undefined);
+}
+
+// Zadania: znajdź przypomnienia należne na teraz, wyślij push, zaznacz reminded_at.
+async function runTaskReminders(env: Env): Promise<void> {
+  const now = nowIso();
+  // Zadanie należne, gdy moment przypomnienia (due_at minus wyprzedzenie) już nadszedł.
+  const due = await env.DB.prepare(
+    `SELECT id, content, reminder_offset_minutes FROM tasks
+     WHERE status = 'open' AND has_time = 1 AND reminded_at IS NULL
+       AND due_at IS NOT NULL
+       AND unixepoch(due_at) - reminder_offset_minutes * 60 <= unixepoch(?)`,
+  ).bind(now).all<{ id: number; content: string; reminder_offset_minutes: number }>();
+
+  const tasks = due.results ?? [];
+  if (tasks.length === 0) return;
+
+  await processTaskReminders(tasks, await loadSubscriptions(env), {
+    sendPush: (sub, task) =>
+      sendPush(env, sub, {
+        title: reminderTitle(task.reminder_offset_minutes),
+        body: task.content,
+        tag: `task-${task.id}`,
+      }),
+    setRemindedAt: (taskId) =>
+      env.DB.prepare("UPDATE tasks SET reminded_at = ? WHERE id = ?")
+        .bind(now, taskId)
+        .run()
+        .then(() => undefined),
+    deleteSub: (subId) => deleteSubscription(env, subId),
+  });
+}
+
+// Urodziny: raz w roku, od BIRTHDAY_NOTIFY_HOUR czasu LOKALNEGO (cron chodzi w UTC).
+// Strzelamy przy dowolnym ticku po tej godzinie, dopóki last_notified_year nie dogoni roku —
+// dzięki temu zgubiona minuta crona naprawia się sama przy następnym przebiegu.
+async function runBirthdayNotifications(env: Env): Promise<void> {
+  const today = localDateParts(new Date());
+  // Przed godziną powiadomienia nie ma po co ruszać D1 — utrzymanie zostaje przy $0.
+  if (today.hour < BIRTHDAY_NOTIFY_HOUR) return;
+
+  const keys = birthdayDayKeys(today);
+  const keyClause = keys.map(() => "(month = ? AND day = ?)").join(" OR ");
+  const due = await env.DB.prepare(
+    `SELECT id, name, month, day, birth_year FROM birthdays
+     WHERE (last_notified_year IS NULL OR last_notified_year < ?)
+       AND (${keyClause})`,
+  ).bind(today.year, ...keys.flatMap((key) => [key.month, key.day])).all<BirthdayRow>();
+
+  const birthdays = due.results ?? [];
+  if (birthdays.length === 0) return;
+
+  await notifySubscribers(birthdays, await loadSubscriptions(env), {
+    sendPush: (sub, birthday) =>
+      sendPush(env, sub, {
+        ...birthdayNotification(birthday, today.year),
+        tag: `birthday-${birthday.id}`,
+      }),
+    markSent: (birthday) =>
+      env.DB.prepare("UPDATE birthdays SET last_notified_year = ? WHERE id = ?")
+        .bind(today.year, birthday.id)
+        .run()
+        .then(() => undefined),
+    deleteSub: (subId) => deleteSubscription(env, subId),
+  }, "birthday");
+}
+
 export default {
   fetch: app.fetch,
 
-  // Cron co minutę: znajdź zadania do przypomnienia teraz, wyślij push, zaznacz reminded_at.
+  // Cron co minutę: przypomnienia o zadaniach + urodziny.
   async scheduled(_event: ScheduledEvent, env: Env, _ctx: ExecutionContext): Promise<void> {
-    const now = nowIso();
-    // Zadanie należne, gdy moment przypomnienia (due_at minus wyprzedzenie) już nadszedł.
-    const due = await env.DB.prepare(
-      `SELECT id, content, reminder_offset_minutes FROM tasks
-       WHERE status = 'open' AND has_time = 1 AND reminded_at IS NULL
-         AND due_at IS NOT NULL
-         AND unixepoch(due_at) - reminder_offset_minutes * 60 <= unixepoch(?)`,
-    ).bind(now).all<{ id: number; content: string; reminder_offset_minutes: number }>();
-
-    const tasks = due.results ?? [];
-    if (tasks.length === 0) return;
-
-    const subsRes = await env.DB.prepare(
-      "SELECT id, endpoint, p256dh, auth FROM push_subscriptions",
-    ).all<StoredSubscription>();
-    const subs = subsRes.results ?? [];
-
-    await processTaskReminders(tasks, subs, {
-      sendPush: (sub, task) =>
-        sendPush(env, sub, {
-          title: reminderTitle(task.reminder_offset_minutes),
-          body: task.content,
-          tag: `task-${task.id}`,
-        }),
-      setRemindedAt: (taskId) =>
-        env.DB.prepare("UPDATE tasks SET reminded_at = ? WHERE id = ?")
-          .bind(now, taskId)
-          .run()
-          .then(() => undefined),
-      deleteSub: (subId) =>
-        env.DB.prepare("DELETE FROM push_subscriptions WHERE id = ?")
-          .bind(subId)
-          .run()
-          .then(() => undefined),
-    });
+    // Każdy blok w osobnym try — awaria przypomnień nie może zabrać ze sobą urodzin (i odwrotnie).
+    try {
+      await runTaskReminders(env);
+    } catch (err) {
+      console.error("[cron] task reminders failed:", err instanceof Error ? err.message : String(err));
+    }
+    try {
+      await runBirthdayNotifications(env);
+    } catch (err) {
+      console.error("[cron] birthdays failed:", err instanceof Error ? err.message : String(err));
+    }
   },
 };

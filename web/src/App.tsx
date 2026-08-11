@@ -9,6 +9,7 @@ import { TasksPage } from "./features/Tasks";
 import { Calendar } from "./features/Calendar";
 import { Ideas } from "./features/Ideas";
 import { Settings } from "./features/Settings";
+import { Birthdays } from "./features/Birthdays";
 import { getToken } from "./lib/token";
 
 const router = createBrowserRouter([
@@ -21,6 +22,7 @@ const router = createBrowserRouter([
       { path: "calendar", element: <Calendar /> },
       { path: "ideas", element: <Ideas /> },
       { path: "settings", element: <Settings /> },
+      { path: "birthdays", element: <Birthdays /> },
     ],
   },
 ]);

@@ -2,8 +2,9 @@
 // Imię trzymane lokalnie (per urządzenie). Eksport i Wyloguj przeniesione tu z menu ⋮ nagłówka.
 
 import { useRef, useState, type ChangeEvent } from "react";
+import { useNavigate } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { UserRound, ArrowDownToLine, FileUp, LogOut } from "lucide-react";
+import { UserRound, ArrowDownToLine, FileUp, LogOut, Cake } from "lucide-react";
 import { getName, setName } from "../lib/settings";
 import { downloadExport } from "../lib/export";
 import { ApiError } from "../lib/api";
@@ -11,6 +12,7 @@ import { ImportFileError, readImportFile, restoreImport, type ImportSummary } fr
 import { clearToken } from "../lib/token";
 
 export function Settings() {
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
   const importInputRef = useRef<HTMLInputElement>(null);
   const [name, setNameState] = useState(getName());
@@ -70,8 +72,14 @@ export function Settings() {
   }
 
   function importSummaryMessage(summary: ImportSummary): string {
-    const { tasks, ideas, projects, routines } = summary.imported;
-    return `Odtworzono: ${tasks} zadań, ${ideas} pomysłów, ${projects} projektów i ${routines} rutyn.`;
+    const { tasks, ideas, projects, routines, birthdays } = summary.imported;
+    const base = `Odtworzono: ${tasks} zadań, ${ideas} pomysłów, ${projects} projektów i ${routines} rutyn.`;
+    // Starsza kopia nie zawiera urodzin — mówimy wprost, że lista została nietknięta,
+    // żeby „0 urodzin" nie zostało odczytane jako skasowanie.
+    if (birthdays === null || birthdays === undefined) {
+      return `${base} Lista urodzin bez zmian (kopia jej nie zawierała).`;
+    }
+    return `${base} Urodziny: ${birthdays}.`;
   }
 
   async function onConfirmImport() {
@@ -96,6 +104,7 @@ export function Settings() {
         queryClient.invalidateQueries({ queryKey: ["ideas"] }),
         queryClient.invalidateQueries({ queryKey: ["projects"] }),
         queryClient.invalidateQueries({ queryKey: ["routines"] }),
+        queryClient.invalidateQueries({ queryKey: ["birthdays"] }),
       ]);
       setImportSuccess(importSummaryMessage(summary));
       resetImportSelection();
@@ -139,6 +148,21 @@ export function Settings() {
         </p>
       </section>
 
+      {/* Urodziny — osobny ekran, bo listę odwiedza się kilka razy w roku. */}
+      <section className="space-y-3 rounded-[16px] border border-card-border bg-card p-4">
+        <h2 className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted">Bliscy</h2>
+        <button
+          onClick={() => navigate("/birthdays")}
+          className="flex w-full items-center gap-2.5 rounded-[12px] border border-card-border bg-white/[0.04] px-3.5 py-3 text-left text-sm text-ink transition-colors hover:bg-white/[0.07]"
+        >
+          <Cake size={17} strokeWidth={2} className="text-muted" />
+          Urodziny
+        </button>
+        <p className="text-xs text-faint">
+          Powiadomienie przychodzi rano w dniu urodzin.
+        </p>
+      </section>
+
       {/* Dane */}
       <section className="space-y-3 rounded-[16px] border border-card-border bg-card p-4">
         <h2 className="text-[11px] font-bold uppercase tracking-[0.14em] text-muted">Dane</h2>
@@ -176,7 +200,7 @@ export function Settings() {
               <p className="text-sm font-semibold text-alarm-text">Zastąpić wszystkie dane?</p>
               <p className="break-all text-xs text-subtle">{pendingImport.fileName}</p>
               <p className="text-xs leading-relaxed text-muted">
-                Zadania, pomysły, projekty i rutyny zostaną zastąpione zawartością kopii.
+                Zadania, pomysły, projekty, rutyny i urodziny zostaną zastąpione zawartością kopii.
                 Najpierw automatycznie pobierzemy kopię obecnych danych.
               </p>
             </div>
