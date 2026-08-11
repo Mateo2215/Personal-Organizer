@@ -100,8 +100,18 @@ dokładny wzorzec `last_done_on` z rutyn. `birth_year` opcjonalny → wiek tylko
 #### Weryfikacja całości (Fazy 1-3)
 - [x] Worker **78/78**, front **38/38**, `tsc --noEmit` czysty w obu paczkach, lint czysty, build przechodzi.
 - [x] Migracja `0006` założona w produkcyjnym D1 przez usera (2026-08-11, potwierdzone).
-- [ ] **P1: PUSH na `main`** — migracja jest już w D1, więc push jest bezpieczny (kolejność zachowana).
-- [ ] **P2: testy na telefonie po deployu** (patrz pozycje wyżej) + pierwszy realny push urodzinowy.
+- [x] **PUSH na `main` wykonany** — commit `0b4ccbc` (2026-08-11), kolejność migracja→push zachowana.
+      Workers Builds uruchomione pushem.
+
+#### Zostaje do potwierdzenia na żywo (klik usera — kod nie wykona)
+- [ ] **P1: pierwszy realny push urodzinowy** — dodaj osobę z datą na dziś, poczekaj do 8:00
+      rano czasu lokalnego (lub dodaj po 8:00 — wtedy przyjdzie przy najbliższym ticku crona).
+      To jedyna część, której nie da się zweryfikować inaczej niż upływem czasu.
+- [ ] **P2: ekran `/birthdays` na telefonie** — czy dwa selecty (dzień/miesiąc) są wygodne kciukiem,
+      czy lista „od najbliższych" ma sens, czy edycja przez tap w wiersz jest odkrywalna.
+- [ ] **P2: karta na „Dziś"** — czy czytelna i czy nie przeszkadza, gdy nie ma urodzin (nie powinna się pokazywać).
+- [ ] **P3: eksport po zmianie formatu** — pobierz kopię i sprawdź, że ma `format_version: 2`
+      oraz sekcję `birthdays`.
 
 ### Skróty dni tygodnia przy terminach — wypchnięte na `main`, czekają na test telefonu
 - [x] Dodać wspólny formatter `13.07, 14:00 - pon.` dla terminów zadań, bez zmiany API ani danych.
