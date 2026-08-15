@@ -183,3 +183,18 @@ po restarcie. Spinner widać, bo nie ma czego pokazać z pamięci, a żądanie u
 w QueryClient — zawieszone żądanie pada szybko i ponawia się na wybudzonym łączu. Front-only, zero D1/cron/push.
 **Bezpieczeństwo paczek:** persist-client/sync-storage-persister to ten sam wydawca (tannerlinsley) i wersja
 co `@tanstack/react-query`, zależności przechodnie tylko z rodziny `@tanstack/query-*` — zero obcych paczek.
+
+## 2026-08-11 — `npm test` w tym repo NIE sprawdza typów — `tsc --noEmit` to osobny krok
+**Co:** Po dołożeniu urodzin do importu `npm test` w `worker/` świecił **78/78 na zielono**, a `npx tsc --noEmit`
+w tym samym momencie zwracał dwa błędy `TS2322` w `import.test.ts` (literalne typy z `currentBackup()` nie
+pozwalały dopisać osoby z `birth_year: null`). Vitest transpiluje przez esbuild, który **wycina typy zamiast
+je weryfikować** — więc test może przejść na kodzie, który się nie kompiluje.
+**Dlaczego ważne:** Ani `worker/package.json`, ani `web/package.json` nie mają skryptu `typecheck`, a jedyna
+komenda kojarzona z weryfikacją to `npm test`. Raport „testy zielone" bez `tsc` jest więc **niepełny**, a błąd
+typów w kodzie produkcyjnym (nie tylko w teście) przeszedłby na `main` — gdzie push = natychmiastowy redeploy
+na żywą apkę. W `web/` osłania to jeszcze `npm run build` (Vite robi `tsc -b`), ale w `worker/` **nie ma
+żadnego builda przed deployem** — CF buduje dopiero front, a Worker leci przez `wrangler deploy`.
+**Jak stosować:** Pełna weryfikacja przed pushem to CZTERY kroki, nie jeden:
+`npm test` w `worker/` + `npm test` w `web/` + **`npx tsc --noEmit` w `worker/`** + `npm run lint && npm run build`
+w `web/`. Każda komenda z `NODE_OPTIONS=--use-system-ca`. Jeśli kiedyś dokładasz skrypt `typecheck` do
+`worker/package.json`, dopisz go też do `ci:build`, żeby CF wywalał build zamiast wdrażać niekompilujący się kod.

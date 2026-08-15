@@ -14,7 +14,7 @@ Stack: Cloudflare Workers (Hono) + D1 + Cron + Web Push + Workers Static Assets;
 front React + Vite + TS, Tailwind, TanStack Query (cache persist do `localStorage`).
 Auth = token aplikacyjny Bearer (NIE Cloudflare Access). Repo: GitHub `Mateo2215/Personal-Organizer`, gałąź `main`.
 
-**Repo czyste i zsynchronizowane z `origin/main`** (ostatni commit funkcji: sesja 21, `dee9318`).
+**Repo czyste i zsynchronizowane z `origin/main`** (ostatni commit funkcji: sesja 22, `0b4ccbc` — urodziny).
 Cała mapa drogowa P1/P2/P3 dowieziona i potwierdzona na żywo (m.in. lag startowy i ekran gratulacji
 potwierdzone przez usera 2026-06-30). Świadomie skreślone: pomysł→zadanie (#4), sekcja „Bez terminu" (#7),
 tagi i statystyki (łamią linie cięcia v1).
@@ -39,7 +39,7 @@ urodziny wchodzą do eksportu/importu w tej samej sesji (`format_version` 1→2)
 więc omijamy „przezbrajanie terminu" z v2 #9. `last_notified_year` = idempotencja roczna,
 dokładny wzorzec `last_done_on` z rutyn. `birth_year` opcjonalny → wiek tylko gdy znany.
 
-#### Faza 1 — dane + API + cron (backend, jeszcze niewidoczne) — ✅ KOD GOTOWY, NIEWYPCHNIĘTY
+#### Faza 1 — dane + API + cron (backend, jeszcze niewidoczne) — ✅ WYPCHNIĘTE na `main` (`0b4ccbc`)
 - [x] `worker/migrations/0006_birthdays.sql` — tabela + indeks `(month, day)`.
       ⚠️ ZAŁOŻYĆ RĘCZNIE W D1 CONSOLE **PRZED** pushem (push = natychmiastowy redeploy prod).
 - [x] `worker/src/birthdays.ts` (nowy, czysty/testowalny jak `scheduler.ts`): lokalna data w
@@ -58,10 +58,11 @@ dokładny wzorzec `last_done_on` z rutyn. `birth_year` opcjonalny → wiek tylko
       `tsc --noEmit` czysty, migracja i zapytania crona sprawdzone na realnym SQLite (`--local`):
       fallback 29.02 i filtr `last_notified_year` potwierdzone na danych.
 
-- [ ] **P1 (KLIK USERA): założyć migrację `0006` w D1 Console PRZED pushem.** Gołe DDL, jedna linia
+- [x] **P1 (KLIK USERA): założyć migrację `0006` w D1 Console PRZED pushem.** Zrobione przez usera
+      2026-08-11, potwierdzone — kolejność migracja→push zachowana. Gołe DDL, jedna linia
       (konsola spłaszcza tekst, komentarz `--` zjada resztę — zob. `lessons.md` 2026-06-17).
 
-#### Faza 2 — front: ekran zarządzania + karta na „Dziś" — ✅ KOD GOTOWY, NIEWYPCHNIĘTY
+#### Faza 2 — front: ekran zarządzania + karta na „Dziś" — ✅ WYPCHNIĘTE na `main` (`0b4ccbc`)
 - [x] `web/src/lib/birthdays.ts` — typy, wywołania API, `daysUntil`/`turningAge`/sortowanie/grupowanie.
       Reguła 29.02 celowo IDENTYCZNA jak w cronie — inaczej lista pokazywałaby co innego, niż wysyła push.
 - [x] `web/src/features/Birthdays.tsx` — lista „od najbliższych" pogrupowana po miesiącach, dodawanie,
@@ -79,7 +80,7 @@ dokładny wzorzec `last_done_on` z rutyn. `birth_year` opcjonalny → wiek tylko
 - [ ] **Bez wyszukiwarki** — świadomie, do czasu sygnału z użycia. Lista grupowana po miesiącach
       działa i przy 8, i przy 30 osobach; wyszukiwarka przy kilkunastu byłaby pustym ozdobnikiem.
 
-#### Faza 3 — backup (eksport/import v2) — ✅ KOD GOTOWY, NIEWYPCHNIĘTY
+#### Faza 3 — backup (eksport/import v2) — ✅ WYPCHNIĘTE na `main` (`0b4ccbc`)
 - [x] `EXPORT_FORMAT_VERSION` 1→2 + `parseBirthday` w `worker/src/import.ts`; `/api/export`
       i `/api/import` obsługują urodziny; `ExportData` w `web/src/lib/export.ts`.
       Wersje wczytywane: `SUPPORTED_VERSIONS = [1, 2]` + kopie bez wersji (najstarsze).
